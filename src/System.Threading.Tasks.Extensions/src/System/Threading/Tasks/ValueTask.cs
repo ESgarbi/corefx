@@ -1,8 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -71,23 +72,11 @@ namespace System.Threading.Tasks
         {
             if (task == null)
             {
-                throw new ArgumentNullException("task");
+                throw new ArgumentNullException(nameof(task));
             }
 
             _task = task;
             _result = default(TResult);
-        }
-
-        /// <summary>Implicit operator to wrap a <see cref="ValueTask{TResult}"/> around a task.</summary>
-        public static implicit operator ValueTask<TResult>(Task<TResult> task)
-        {
-            return new ValueTask<TResult>(task);
-        }
-
-        /// <summary>Implicit operator to wrap a <see cref="ValueTask{TResult}"/> around a result.</summary>
-        public static implicit operator ValueTask<TResult>(TResult result)
-        {
-            return new ValueTask<TResult>(result);
         }
 
         /// <summary>Returns the hash code for this instance.</summary>
@@ -173,10 +162,23 @@ namespace System.Threading.Tasks
         /// <summary>Gets a string-representation of this <see cref="ValueTask{TResult}"/>.</summary>
         public override string ToString()
         {
-            return
-                _task == null ? _result.ToString() :
-                _task.Status == TaskStatus.RanToCompletion ? _task.Result.ToString() :
-                _task.Status.ToString();
+            if (_task != null)
+            {
+                return _task.Status == TaskStatus.RanToCompletion && _task.Result != null ?
+                    _task.Result.ToString() :
+                    string.Empty;
+            }
+            else
+            {
+                return _result != null ?
+                    _result.ToString() :
+                    string.Empty;
+            }
         }
+
+        /// <summary>Creates a method builder for use with an async method.</summary>
+        /// <returns>The created builder.</returns>
+        [EditorBrowsable(EditorBrowsableState.Never)] // intended only for compiler consumption
+        public static AsyncValueTaskMethodBuilder<TResult> CreateAsyncMethodBuilder() => AsyncValueTaskMethodBuilder<TResult>.Create();
     }
 }

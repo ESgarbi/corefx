@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics.Contracts;
@@ -96,9 +97,7 @@ namespace System.IO
 
         private static ReadLinesIterator CreateIterator(string path, Encoding encoding, StreamReader reader)
         {
-            Stream stream = FileStream.InternalOpen(path);
-
-            return new ReadLinesIterator(path, encoding, reader ?? new StreamReader(stream, encoding));
+            return new ReadLinesIterator(path, encoding, reader ?? new StreamReader(FileStream.InternalOpen(path, useAsync: false), encoding));
         }
     }
 }

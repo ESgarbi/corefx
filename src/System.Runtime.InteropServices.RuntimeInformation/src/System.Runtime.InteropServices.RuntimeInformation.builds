@@ -3,19 +3,22 @@
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <ItemGroup>
     <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
-      <OSGroup>FreeBSD</OSGroup>
-    </Project>
-    <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
-      <OSGroup>Linux</OSGroup>
-    </Project>
-    <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
-      <OSGroup>OSX</OSGroup>
+      <OSGroup>Unix</OSGroup>
     </Project>
     <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
       <OSGroup>Windows_NT</OSGroup>
     </Project>
     <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
-      <TargetGroup>net46</TargetGroup>
+      <OSGroup>Windows_NT</OSGroup>
+      <TargetGroup>win8</TargetGroup>
+    </Project>
+    <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
+      <OSGroup>Windows_NT</OSGroup>
+      <TargetGroup>wpa81</TargetGroup>
+    </Project>
+    <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
+      <OSGroup>Windows_NT</OSGroup>
+      <TargetGroup>net45</TargetGroup>
     </Project>
     <Project Include="System.Runtime.InteropServices.RuntimeInformation.csproj">
       <OSGroup>Windows_NT</OSGroup>

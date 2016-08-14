@@ -5,6 +5,11 @@
         "CommonTypes": [ ]
     },
     {
+        "Name": "NuGet3MinVersion",
+        "Description": "When using NuGet 3.x this package requires at least version {0}.",
+        "CommonTypes": [ ]
+    },
+    {
         "Name": "Microsoft.Cci",
         "Description": "Provides a portable version of the Microsoft.Cci library",
         "CommonTypes": [ ]
@@ -42,7 +47,7 @@
     },
     {
         "Name": "Microsoft.NETCore.Portable.Compatibility",
-        "Description": "Enables compatiblity with portable libraries targeting previous .NET releases like .NET Framework 4.0 and Silverlight.\nThis package supports retargeting references to classic reference assemblies (mscorlib.dll, system.dll, etc) to new contract assemblies (System.Runtime.dll, System.IO, etc).  It does this in a pay-for-play way to prevent consuming assemblies from having to reference all of the contracts that happen to overlap with mscorlib.  As such, when using this package you may encounter errors like\n\terror CS0012: The type 'WebRequest' is defined in an assembly that is not referenced. You must add a reference to assembly 'System.Net.Requests, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'.\nTo resolve these errors install the package with the same name name as the missing assembly.",
+        "Description": "Enables compatibility with portable libraries targeting previous .NET releases like .NET Framework 4.0 and Silverlight.\nThis package supports retargeting references to classic reference assemblies (mscorlib.dll, system.dll, etc) to new contract assemblies (System.Runtime.dll, System.IO, etc).  It does this in a pay-for-play way to prevent consuming assemblies from having to reference all of the contracts that happen to overlap with mscorlib.  As such, when using this package you may encounter errors like\n\terror CS0012: The type 'WebRequest' is defined in an assembly that is not referenced. You must add a reference to assembly 'System.Net.Requests, Version=0.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'.\nTo resolve these errors install the package with the same name as the missing assembly.",
         "CommonTypes": [ ]
     },
     {
@@ -101,6 +106,11 @@
         "CommonTypes": [ ]
     },
     {
+        "Name": "Microsoft.Private.PackageBaseline",
+        "Description": "Package used by CoreFx build infrastructure to represent the latest package versions in a release.",
+        "CommonTypes": [ ]
+    },
+    {
         "Name": "Microsoft.TargetingPack.NETFramework.v4.6",
         "Description": "Contains the .NET Framework v4.6 targeting pack.",
         "CommonTypes": [ ]
@@ -125,13 +135,13 @@
     },
     {
         "Name": "NETStandard.Library",
-        "Description": "A set of standard .NET API's that are prescribed to be used and supported together. This includes all of the API's in the NETStandard.Platform package plus additional libraries that are core to .NET but built on top of NETStandard.Platform.",
+        "Description": "A set of standard .NET APIs that are prescribed to be used and supported together. This includes all of the APIs in the NETStandard.Platform package plus additional libraries that are core to .NET but built on top of NETStandard.Platform.",
         "CommonTypes": [
         ]
     },
     {
         "Name": "NETStandard.Platform",
-        "Description": "A set of low level API that all .NET platforms must support.",
+        "Description": "A set of low level APIs that all .NET platforms must support.",
         "CommonTypes": [
         ]
     },
@@ -321,6 +331,60 @@
         ]
     },
     {
+        "Name": "System.Composition",
+        "Description": "This packages provides a version of the Managed Extensibility Framework (MEF) that is lightweight and specifically optimized for high throughput scenarios, such as the web.",
+        "CommonTypes": [
+            "System.Composition.ExportAttribute",
+            "System.Composition.ImportAttribute",
+            "System.Composition.Convention.ConventionBuilder",
+            "System.Composition.Hosting.CompositionHost",
+            "System.Composition.CompositionContext",
+            "System.Composition.CompositionContextExtensions",
+        ]
+    },
+    {
+        "Name": "System.Composition.AttributedModel",
+        "Description": "Provides common attributes used by System.Composition types.",
+        "CommonTypes": [
+            "System.Composition.ExportAttribute",
+            "System.Composition.ImportAttribute",
+            "System.Composition.Convention.AttributedModelProvider"
+        ]
+    },
+    {
+        "Name": "System.Composition.Convention",
+        "Description": "Provides types that support using Managed Extensibility Framework with a convention-based configuration model.",
+        "CommonTypes": [
+            "System.Composition.Convention.ConventionBuilder",
+            "System.Composition.Convention.ExportConventionBuilder",
+            "System.Composition.Convention.ImportConventionBuilder",
+            "System.Composition.Convention.PartConventionBuilder",
+            "System.Composition.Convention.ParameterImportConventionBuilder"
+        ]
+    },
+    {
+        "Name": "System.Composition.Hosting",
+        "Description": "Provides Managed Extensibility Framework types that are useful to developers of extensible applications, or hosts.",
+        "CommonTypes": [
+            "System.Composition.Hosting.CompositionHost"
+        ]
+    },
+    {
+        "Name": "System.Composition.Runtime",
+        "Description": "Contains runtime components of the Managed Extensibility Framework.",
+        "CommonTypes": [
+            "System.Composition.CompositionContext"
+        ]
+    },
+    {
+        "Name": "System.Composition.TypedParts",
+        "Description": "Provides some extension methods for the Managed Extensibility Framework.",
+        "CommonTypes": [
+            "System.Composition.CompositionContextExtensions",
+            "System.Composition.Hosting.ContainerConfiguration"
+        ]
+    },
+    {
         "Name": "System.Console",
         "Description": "Provides the System.Console class, which represents the standard input, output and error streams for console applications.",
         "CommonTypes": [
@@ -404,6 +468,13 @@
         ]
     },
     {
+        "Name": "System.Diagnostics.Debug.SymbolReader",
+        "Description": "Provides the System.Diagnostics.Debug.SymbolReader class, which allows extraction of a debug information from portable pdb files.",
+        "CommonTypes": [
+            "System.Diagnostics.Debug.SymbolReader"
+        ]
+    },
+    {
         "Name": "System.Diagnostics.FileVersionInfo",
         "Description": "Provides the System.Diagnostics.FileVersionInfo class, which allows access to Win32 version resource information for a physical file on disk.",
         "CommonTypes": [
@@ -471,6 +542,18 @@
         ]
     },
     {
+        "Name": "System.Drawing.Primitives",
+        "Description": "Provides basic drawing primitive structures, that exposes the corresponding System.Drawing.dll types in .NET Core.",
+        "CommonTypes": [
+            "System.Drawing.Point",
+            "System.Drawing.PointF",
+            "System.Drawing.Size",
+            "System.Drawing.SizeF",
+            "System.Drawing.Rectangle",
+            "System.Drawing.RectangleF"
+        ]
+    },
+    {
         "Name": "System.Dynamic.Runtime",
         "Description": "Provides classes and interfaces that support the Dynamic Language Runtime (DLR).",
         "CommonTypes": [
@@ -519,7 +602,7 @@
     },
     {
         "Name": "System.Globalization.Extensions",
-        "Description": "Provides classes for performing unicode string normalization, culture-specific string comparisons and support the use of non-ASCII characters for Internet domain names.",
+        "Description": "Provides classes for performing Unicode string normalization, culture-specific string comparisons and support the use of non-ASCII characters for Internet domain names.",
         "CommonTypes": [
             "System.StringNormalizationExtensions",
             "System.Text.NormalizationForm",
@@ -531,9 +614,7 @@
         "Description": "Provides base input and output (I/O) types, including System.IO.Stream, System.IO.StreamReader and System.IO.StreamWriter, that allow reading and writing to data streams",
         "CommonTypes": [
             "System.IO.Stream",
-            "System.IO.IOException",
             "System.IO.EndOfStreamException",
-            "System.IO.FileNotFoundException",
             "System.IO.MemoryStream",
             "System.IO.StreamReader",
             "System.IO.StreamWriter",
@@ -651,6 +732,11 @@
         ]
     },
     {
+        "Name": "System.IO.Packaging",
+        "Description": "Provides classes that support storage of multiple data objects in a single container.",
+        "CommonTypes": []
+    },
+    {
         "Name": "System.IO.Pipes",
         "Description": "Provides a means for interprocess communication through anonymous and/or named pipes.",
         "CommonTypes": [
@@ -660,6 +746,16 @@
             "System.IO.Pipes.PipeTransmissionMode",
             "System.IO.Pipes.NamedPipeClientStream",
             "System.IO.Pipes.PipeStream"
+        ]
+    },
+    {
+        "Name": "System.IO.Pipes.AccessControl",
+        "Description": "Provides types for managing access and audit control lists for pipes.",
+        "CommonTypes": [
+            "System.IO.Pipes.PipeSecurity",
+            "System.IO.Pipes.PipeAccessRule",
+            "System.IO.Pipes.PipeAuditRule",
+            "System.IO.Pipes.PipeAccessRights"
         ]
     },
     {
@@ -734,7 +830,7 @@
     },
     {
         "Name": "System.Net.Http.Rtc",
-        "Description": "Provides the System.Net.Http.RtcRequestFactory class, which creates HTTP requests for use with the Real-Time-Communitications (RTC) background notification infrastructure.",
+        "Description": "Provides the System.Net.Http.RtcRequestFactory class, which creates HTTP requests for use with the Real-Time-Communications (RTC) background notification infrastructure.",
         "CommonTypes": [
             "System.Net.Http.RtcRequestFactory"
         ]
@@ -941,7 +1037,7 @@
     },
     {
         "Name": "System.Reflection.DispatchProxy",
-        "Description": "Provides a class to dynamcially create proxy types that implement a specified interface and derive from a specified DispatchProxy type. Method invocations on the generated proxyinstance are dispatched to that DispatchProxy base type.",
+        "Description": "Provides a class to dynamically create proxy types that implement a specified interface and derive from a specified DispatchProxy type. Method invocations on the generated proxyinstance are dispatched to that DispatchProxy base type.",
         "CommonTypes": [
             "System.Reflection.DispatchProxy"
         ]
@@ -964,7 +1060,7 @@
     },
     {
         "Name": "System.Reflection.Emit.ILGeneration",
-        "Description": "Provides clases that allow a compiler or tool to emit Microsoft intermediate language (MSIL). The primary clients of these classes are script engines and compilers.",
+        "Description": "Provides classes that allow a compiler or tool to emit Microsoft intermediate language (MSIL). The primary clients of these classes are script engines and compilers.",
         "CommonTypes": [
             "System.Reflection.Emit.ILGenerator",
             "System.Reflection.Emit.Label",
@@ -1033,10 +1129,16 @@
         ]
     },
     {
-        "Name": "System.Resources.ReaderWriter",
-        "Description": "Provides classes which read and write resources to streams in the system-default format.",
+        "Name": "System.Resources.Reader",
+        "Description": "Provides classes which read resources from streams in the system-default format.",
         "CommonTypes": [
-            "System.Resources.ResourceReader",
+            "System.Resources.ResourceReader"
+        ]
+    },
+    {
+        "Name": "System.Resources.Writer",
+        "Description": "Provides classes which write resources to streams in the system-default format.",
+        "CommonTypes": [
             "System.Resources.ResourceWriter"
         ]
     },
@@ -1064,6 +1166,13 @@
             "System.UInt64",
             "System.IDisposable",
             "System.Uri"
+        ]
+    },
+    {
+        "Name": "System.Runtime.CompilerServices.Unsafe",
+        "Description": "Provides the System.Runtime.CompilerServices.Unsafe class, which provides generic, low-level functionality for manipulating pointers.",
+        "CommonTypes": [
+            "System.Runtime.CompilerServices.Unsafe",
         ]
     },
     {
@@ -1150,6 +1259,14 @@
         "CommonTypes": [
             "System.Numerics.BigInteger",
             "System.Numerics.Complex"
+        ]
+    },
+    {
+        "Name": "System.Runtime.Serialization.Formatters",
+        "Description": "Provides common types for libraries that support runtime serialization.",
+        "CommonTypes": [
+            "System.SerializableAttribute",
+            "System.Runtime.Serialization.ISerializable"
         ]
     },
     {
@@ -1293,6 +1410,13 @@
         ]
     },
     {
+        "Name": "System.Security.Cryptography.Pkcs",
+        "Description": "Provides support for PKCS and CMS algorithms.",
+        "CommonTypes": [
+            "System.Security.Cryptography.Pkcs.EnvelopedCms"
+        ]
+    },
+    {
         "Name": "System.Security.Cryptography.Primitives",
         "Description": "Provides common types for the cryptographic libraries.",
         "CommonTypes": [
@@ -1308,6 +1432,14 @@
             "System.Security.Cryptography.PaddingMode",
             "System.Security.Cryptography.CryptoStream",
             "System.Security.Cryptography.CryptoStreamMode"
+        ]
+    },
+    {
+        "Name": "System.Security.Cryptography.ProtectedData",
+        "Description": "Provides access to Windows Data Protection Api.",
+        "CommonTypes": [
+            "System.Security.Cryptography.DataProtectionScope",
+            "System.Security.Cryptography.ProtectedData",
         ]
     },
     {
@@ -1461,7 +1593,7 @@
     },
     {
         "Name": "System.Text.Encodings.Web",
-        "Description": "Html, Uri, and JavaScript encoding library.",
+        "Description": "Provides types for encoding and escaping strings for use in JavaScript, HyperText Markup Language (HTML), and uniform resource locators (URL).",
         "CommonTypes": [
             "System.Text.Encodings.Web.HtmlEncoder",
             "System.Text.Encodings.Web.UrlEncoder",
@@ -1496,7 +1628,7 @@
     },
     {
         "Name": "System.Threading.AccessControl",
-        "Description": "Provides support for managing access and audit control lists for synchronization primitves.",
+        "Description": "Provides support for managing access and audit control lists for synchronization primitives.",
         "CommonTypes": [
             "System.Security.AccessControl.EventWaitHandleAccessRule",
             "System.Security.AccessControl.EventWaitHandleAuditRule",
@@ -1560,6 +1692,13 @@
         ]
     },
     {
+        "Name": "System.Threading.Tasks.Extensions",
+        "Description": "Provides additional types that simplify the work of writing concurrent and asynchronous code.",
+        "CommonTypes": [
+            "System.Threading.Tasks.ValueTask<TResult>"
+        ]
+    },
+    {
         "Name": "System.Threading.Tasks.Parallel",
         "Description": "Provides the System.Threading.Tasks.Parallel class, which adds support for running loops and iterators in parallel.",
         "CommonTypes": [
@@ -1592,6 +1731,21 @@
         "CommonTypes": [
             "System.Threading.Timer",
             "System.Threading.TimerCallback"
+        ]
+    },
+    {
+        "Name": "System.ValueTuple",
+        "Description": "Provides the System.ValueTuple structs, which implement the underlying types for C# 7 tuples.",
+        "CommonTypes": [
+            "System.ValueTuple",
+            "System.ValueTuple<T1>",
+            "System.ValueTuple<T1, T2>",
+            "System.ValueTuple<T1, T2, T3>",
+            "System.ValueTuple<T1, T2, T3, T4>",
+            "System.ValueTuple<T1, T2, T3, T4, T5>",
+            "System.ValueTuple<T1, T2, T3, T4, T5, T6>",
+            "System.ValueTuple<T1, T2, T3, T4, T5, T6, T7>",
+            "System.ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest>"
         ]
     },
     {

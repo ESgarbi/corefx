@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.IO;
@@ -65,37 +66,32 @@ namespace System.Reflection.Metadata.Tests
 
         internal static readonly Dictionary<byte[], GCHandle> peImages = new Dictionary<byte[], GCHandle>();
 
-        internal static unsafe MetadataReader GetMetadataReader(byte[] peImage, bool isModule = false, MetadataStringDecoder decoder = null)
+        internal static unsafe MetadataReader GetMetadataReader(byte[] peImage, bool isModule = false, MetadataReaderOptions options = MetadataReaderOptions.Default, MetadataStringDecoder decoder = null)
         {
             int _;
-            return GetMetadataReader(peImage, out _, isModule, decoder);
+            return GetMetadataReader(peImage, out _, isModule, options, decoder);
         }
 
-        internal static unsafe MetadataReader GetMetadataReader(byte[] peImage, out int metadataStartOffset, bool isModule = false, MetadataStringDecoder decoder = null)
+        internal static unsafe MetadataReader GetMetadataReader(byte[] peImage, out int metadataStartOffset, bool isModule = false, MetadataReaderOptions options = MetadataReaderOptions.Default, MetadataStringDecoder decoder = null)
+        {
+            GCHandle pinned = GetPinnedPEImage(peImage);
+            var headers = new PEHeaders(new MemoryStream(peImage));
+            metadataStartOffset = headers.MetadataStartOffset;
+            return new MetadataReader((byte*)pinned.AddrOfPinnedObject() + headers.MetadataStartOffset, headers.MetadataSize, options, decoder);
+        }
+
+        internal static unsafe GCHandle GetPinnedPEImage(byte[] peImage)
         {
             GCHandle pinned;
             if (!peImages.TryGetValue(peImage, out pinned))
             {
                 peImages.Add(peImage, pinned = GCHandle.Alloc(peImage, GCHandleType.Pinned));
             }
-            var headers = new PEHeaders(new MemoryStream(peImage));
-            metadataStartOffset = headers.MetadataStartOffset;
-            return new MetadataReader((byte*)pinned.AddrOfPinnedObject() + headers.MetadataStartOffset, headers.MetadataSize, MetadataReaderOptions.Default, decoder);
-        }
 
-        private List<CustomAttributeHandle> GetCustomAttributes(MetadataReader reader, int token)
-        {
-            var attributes = new List<CustomAttributeHandle>();
-            foreach (var caHandle in reader.GetCustomAttributes(new EntityHandle((uint)token)))
-            {
-                attributes.Add(caHandle);
-            }
-
-            return attributes;
+            return pinned;
         }
 
         #endregion
-
 
         [Fact]
         public unsafe void EmptyMetadata()
@@ -104,6 +100,7 @@ namespace System.Reflection.Metadata.Tests
 
             Assert.Throws<ArgumentNullException>(() => new MetadataReader(null, 10));
             Assert.Throws<ArgumentOutOfRangeException>(() => new MetadataReader(ptr, -10));
+            Assert.Throws<BadImageFormatException>(() => new MetadataReader(ptr, 0));
         }
 
         [Fact]
@@ -114,6 +111,18 @@ namespace System.Reflection.Metadata.Tests
             Assert.Equal(0x3c2, reader.GetHeapSize(HeapIndex.String));
             Assert.Equal(0x1cc, reader.GetHeapSize(HeapIndex.Blob));
             Assert.Equal(0x010, reader.GetHeapSize(HeapIndex.Guid));
+        }
+
+        [Fact]
+        public unsafe void PointerAndLength()
+        {
+            GCHandle pinned = GetPinnedPEImage(NetModule.AppCS);
+            var headers = new PEHeaders(new MemoryStream(NetModule.AppCS));
+            byte* ptr = (byte*)pinned.AddrOfPinnedObject() + headers.MetadataStartOffset;
+            var reader = new MetadataReader(ptr, headers.MetadataSize);
+
+            Assert.True(ptr == reader.MetadataPointer);
+            Assert.Equal(headers.MetadataSize, reader.MetadataLength);
         }
 
         [Fact]
@@ -178,6 +187,38 @@ namespace System.Reflection.Metadata.Tests
 
             // since we're reading the same PE image our handles are still valid.
             Assert.Throws<DecoderFallbackException>(() => reader.GetString(handle)); // BOOM!
+        }
+
+        [Fact]
+        public void GetToken_Projected()
+        {
+            var reader = GetMetadataReader(WinRT.Lib, options: MetadataReaderOptions.ApplyWindowsRuntimeProjections);
+            int expectedToken = 0x23000001;
+            foreach (var assemblyRefHandle in reader.AssemblyReferences)
+            {
+                Assert.Equal(expectedToken >= 0x23000004, assemblyRefHandle.IsVirtual);
+                Assert.Equal(expectedToken, reader.GetToken(assemblyRefHandle));
+                Assert.Equal(expectedToken, reader.GetToken((Handle)assemblyRefHandle));
+                expectedToken++;
+            }
+
+            Assert.Equal(9, reader.AssemblyReferences.Count);
+        }
+
+        [Fact]
+        public void GetToken_NotProjected()
+        {
+            var reader = GetMetadataReader(WinRT.Lib, options: MetadataReaderOptions.None);
+            var expectedToken = 0x23000001;
+            foreach (var assemblyRefHandle in reader.AssemblyReferences)
+            {
+                Assert.False(assemblyRefHandle.IsVirtual);
+                Assert.Equal(expectedToken, reader.GetToken(assemblyRefHandle));
+                Assert.Equal(expectedToken, reader.GetToken((Handle)assemblyRefHandle));
+                expectedToken++;
+            }
+
+            Assert.Equal(3, reader.AssemblyReferences.Count);
         }
 
         /// <summary>
@@ -1995,6 +2036,20 @@ namespace System.Reflection.Metadata.Tests
             }
         }
 
+        [Fact]
+        public void GetCustomAttributes()
+        {
+            var reader = GetMetadataReader(Interop.Interop_Mock01);
+
+            var attributes1 = reader.GetCustomAttributes(MetadataTokens.EntityHandle(0x02000006));
+            AssertEx.Equal(new[] { 0x16, 0x17, 0x18, 0x19 }, attributes1.Select(a => a.RowId));
+            Assert.Equal(4, attributes1.Count);
+
+            var attributes2 = reader.GetCustomAttributes(MetadataTokens.EntityHandle(0x02000000));
+            AssertEx.Equal(new int[0], attributes2.Select(a => a.RowId));
+            Assert.Equal(0, attributes2.Count);
+        }
+
         /// <summary>
         /// MethodSemantics Table
         ///     Semantic (2-byte unsigned)
@@ -2265,6 +2320,22 @@ namespace System.Reflection.Metadata.Tests
 
             Assert.Equal("Class1", name);
             Assert.Equal(0, genericParams.Count);
+        }
+
+        [Fact]
+        public void GetCustomDebugInformation()
+        {
+            using (var provider = MetadataReaderProvider.FromPortablePdbStream(new MemoryStream(PortablePdbs.DocumentsPdb)))
+            {
+                var reader = provider.GetMetadataReader();
+                var cdi1 = reader.GetCustomAttributes(MetadataTokens.EntityHandle(0x30000001));
+                AssertEx.Equal(new int[0], cdi1.Select(a => a.RowId));
+                Assert.Equal(0, cdi1.Count);
+
+                var cdi2 = reader.GetCustomAttributes(MetadataTokens.EntityHandle(0x03000000));
+                AssertEx.Equal(new int[0], cdi2.Select(a => a.RowId));
+                Assert.Equal(0, cdi2.Count);
+            }
         }
 
         [Fact]

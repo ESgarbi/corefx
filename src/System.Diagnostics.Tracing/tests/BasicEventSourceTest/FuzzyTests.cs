@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -20,7 +21,6 @@ namespace BasicEventSourceTests
         /// Tests the EventSource.Write[T] method (can only use the self-describing mechanism).  
         /// 
         /// </summary>
-        [ActiveIssue(4871, PlatformID.AnyUnix)]
         [Fact]
         public void Test_Write_Fuzzy()
         {
@@ -2671,7 +2671,7 @@ namespace BasicEventSourceTests
                               logger.Write("FWKFKXHDFY",
                   new
                   {
-                      typeToCheck = new DateTimeOffset(30147, TimeZoneInfo.Local.GetUtcOffset(new DateTime(6875))),
+                      typeToCheck = new DateTimeOffset(30147, TimeSpan.FromHours(-8)),
                       A = new Char[] { 'X', 'T' },
                       D = new UInt16[] { 23656 },
                       P = new UIntPtr[] { new UIntPtr(162), new UIntPtr(224) },
@@ -2745,9 +2745,15 @@ namespace BasicEventSourceTests
 
                 // Run tests for ETW
 #if USE_ETW // TODO: Enable when TraceEvent is available on CoreCLR. GitHub issue #4864.
-                EventTestHarness.RunTests(tests, new EtwListener(), logger);
+                using (var listener = new EtwListener())
+                {
+                    EventTestHarness.RunTests(tests, listener, logger);
+                }
 #endif // USE_ETW
-                EventTestHarness.RunTests(tests, new EventListenerListener(), logger);
+                using (var listener = new EventListenerListener())
+                {
+                    EventTestHarness.RunTests(tests, listener, logger);
+                }
             }
         }
     }

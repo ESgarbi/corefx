@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*============================================================
 **
@@ -18,6 +19,15 @@ namespace System.Collections.Generic
         {
         }
 
+        // .NET Native for UWP toolchain overwrites the Default property with optimized 
+        // instantiation-specific implementation. It depends on subtle implementation details of this
+        // class to do so. Once the packaging infrastructure allows it, the implementation 
+        // of EqualityComparer<T> should be moved to CoreRT repo to avoid the fragile dependency.
+        // Until that happens, nothing in this class can change.
+
+        // TODO: Change the _default field to non-volatile and initialize it via implicit static 
+        // constructor for better performance (https://github.com/dotnet/coreclr/pull/4340).
+
         public static EqualityComparer<T> Default
         {
             get
@@ -26,7 +36,7 @@ namespace System.Collections.Generic
                 {
                     object comparer;
 
-                    // NUTC compiler is able to static evalulate the conditions and only put the necessary branches in finally binary code, 
+                    // NUTC compiler is able to static evaluate the conditions and only put the necessary branches in finally binary code, 
                     // even casting to EqualityComparer<T> can be removed.
 
                     // For example: for Byte, the code generated is
@@ -73,6 +83,10 @@ namespace System.Collections.Generic
             }
         }
 
+        // WARNING: We allow diagnostic tools to directly inspect this member (_default). 
+        // See https://github.com/dotnet/corert/blob/master/Documentation/design-docs/diagnostics/diagnostics-tools-contract.md for more details. 
+        // Please do not change the type, the name, or the semantic usage of this member without understanding the implication for tools. 
+        // Get in touch with the diagnostics team if you have questions.
         private static volatile EqualityComparer<T> _default;
 
         public abstract bool Equals(T x, T y);
@@ -85,7 +99,7 @@ namespace System.Collections.Generic
                 return 0;
             if (obj is T)
                 return GetHashCode((T)obj);
-            throw new ArgumentException(SR.Argument_InvalidArgumentForComparison);
+            throw new ArgumentException(SR.Argument_InvalidArgumentForComparison, nameof(obj));
         }
 
         bool IEqualityComparer.Equals(object x, object y)
@@ -101,7 +115,7 @@ namespace System.Collections.Generic
     }
 
     //
-    // ProjectN compatiblity notes:
+    // ProjectN compatibility notes:
     //
     //    Unlike the full desktop, we make no attempt to use the IEquatable<T> interface on T. Because we can't generate
     //    code at runtime, we derive no performance benefit from using the type-specific Equals(). We can't even
@@ -136,118 +150,109 @@ namespace System.Collections.Generic
         }
     }
 
-
-    internal sealed class EqualityComparerForSByte : EqualityComparer<SByte>
+    internal sealed class EqualityComparerForSByte : EqualityComparer<sbyte>
     {
-        public override bool Equals(SByte x, SByte y)
+        public override bool Equals(sbyte x, sbyte y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(SByte x)
+        public override int GetHashCode(sbyte x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForByte : EqualityComparer<Byte>
+    internal sealed class EqualityComparerForByte : EqualityComparer<byte>
     {
-        public override bool Equals(Byte x, Byte y)
+        public override bool Equals(byte x, byte y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(Byte x)
+        public override int GetHashCode(byte x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForInt16 : EqualityComparer<Int16>
+    internal sealed class EqualityComparerForInt16 : EqualityComparer<short>
     {
-        public override bool Equals(Int16 x, Int16 y)
+        public override bool Equals(short x, short y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(Int16 x)
+        public override int GetHashCode(short x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForUInt16 : EqualityComparer<UInt16>
+    internal sealed class EqualityComparerForUInt16 : EqualityComparer<ushort>
     {
-        public override bool Equals(UInt16 x, UInt16 y)
+        public override bool Equals(ushort x, ushort y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(UInt16 x)
+        public override int GetHashCode(ushort x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForInt32 : EqualityComparer<Int32>
+    internal sealed class EqualityComparerForInt32 : EqualityComparer<int>
     {
-        public override bool Equals(Int32 x, Int32 y)
+        public override bool Equals(int x, int y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(Int32 x)
+        public override int GetHashCode(int x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForUInt32 : EqualityComparer<UInt32>
+    internal sealed class EqualityComparerForUInt32 : EqualityComparer<uint>
     {
-        public override bool Equals(UInt32 x, UInt32 y)
+        public override bool Equals(uint x, uint y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(UInt32 x)
+        public override int GetHashCode(uint x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForInt64 : EqualityComparer<Int64>
+    internal sealed class EqualityComparerForInt64 : EqualityComparer<long>
     {
-        public override bool Equals(Int64 x, Int64 y)
+        public override bool Equals(long x, long y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(Int64 x)
+        public override int GetHashCode(long x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForUInt64 : EqualityComparer<UInt64>
+    internal sealed class EqualityComparerForUInt64 : EqualityComparer<ulong>
     {
-        public override bool Equals(UInt64 x, UInt64 y)
+        public override bool Equals(ulong x, ulong y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(UInt64 x)
+        public override int GetHashCode(ulong x)
         {
             return x.GetHashCode();
         }
     }
-
 
     internal sealed class EqualityComparerForIntPtr : EqualityComparer<IntPtr>
     {
@@ -262,7 +267,6 @@ namespace System.Collections.Generic
         }
     }
 
-
     internal sealed class EqualityComparerForUIntPtr : EqualityComparer<UIntPtr>
     {
         public override bool Equals(UIntPtr x, UIntPtr y)
@@ -276,56 +280,55 @@ namespace System.Collections.Generic
         }
     }
 
-
-    internal sealed class EqualityComparerForSingle : EqualityComparer<Single>
+    internal sealed class EqualityComparerForSingle : EqualityComparer<float>
     {
-        public override bool Equals(Single x, Single y)
+        public override bool Equals(float x, float y)
         {
-            return x == y;
+            // == has the wrong semantic for NaN for Single
+            return x.Equals(y);
         }
 
-        public override int GetHashCode(Single x)
+        public override int GetHashCode(float x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForDouble : EqualityComparer<Double>
+    internal sealed class EqualityComparerForDouble : EqualityComparer<double>
     {
-        public override bool Equals(Double x, Double y)
+        public override bool Equals(double x, double y)
         {
-            return x == y;
+            // == has the wrong semantic for NaN for Double
+            return x.Equals(y);
         }
 
-        public override int GetHashCode(Double x)
+        public override int GetHashCode(double x)
         {
             return x.GetHashCode();
         }
     }
 
-
-    internal sealed class EqualityComparerForDecimal : EqualityComparer<Decimal>
+    internal sealed class EqualityComparerForDecimal : EqualityComparer<decimal>
     {
-        public override bool Equals(Decimal x, Decimal y)
+        public override bool Equals(decimal x, decimal y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(Decimal x)
+        public override int GetHashCode(decimal x)
         {
             return x.GetHashCode();
         }
     }
 
-    internal sealed class EqualityComparerForString : EqualityComparer<String>
+    internal sealed class EqualityComparerForString : EqualityComparer<string>
     {
-        public override bool Equals(String x, String y)
+        public override bool Equals(string x, string y)
         {
             return x == y;
         }
 
-        public override int GetHashCode(String x)
+        public override int GetHashCode(string x)
         {
             if (x == null)
                 return 0;

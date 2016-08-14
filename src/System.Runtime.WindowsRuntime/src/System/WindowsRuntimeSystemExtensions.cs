@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.ComponentModel;
 using System.Diagnostics.Contracts;
@@ -86,7 +87,7 @@ namespace System
         public static Task AsTask(this IAsyncAction source, CancellationToken cancellationToken)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 
@@ -112,13 +113,13 @@ namespace System
             switch (source.Status)
             {
                 case AsyncStatus.Completed:
-                    return Helpers.CompletedTask;
+                    return Task.CompletedTask;
 
                 case AsyncStatus.Error:
-                    return Helpers.TaskFromException<VoidValueTypeParameter>(source.ErrorCode.AttachRestrictedErrorInfo());
+                    return Task.FromException(source.ErrorCode.AttachRestrictedErrorInfo());
 
                 case AsyncStatus.Canceled:
-                    return Helpers.TaskFromCancellation<VoidValueTypeParameter>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
+                    return Task.FromCanceled(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
             }
 
             // Benign race: source may complete here. Things still work, just not taking the fast path.
@@ -168,7 +169,7 @@ namespace System
         public static Task<TResult> AsTask<TResult>(this IAsyncOperation<TResult> source, CancellationToken cancellationToken)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 
@@ -197,10 +198,10 @@ namespace System
                     return Task.FromResult(source.GetResults());
 
                 case AsyncStatus.Error:
-                    return Helpers.TaskFromException<TResult>(source.ErrorCode.AttachRestrictedErrorInfo());
+                    return Task.FromException<TResult>(source.ErrorCode.AttachRestrictedErrorInfo());
 
                 case AsyncStatus.Canceled:
-                    return Helpers.TaskFromCancellation<TResult>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
+                    return Task.FromCanceled<TResult>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
             }
 
             // Benign race: source may complete here. Things still work, just not taking the fast path.
@@ -272,7 +273,7 @@ namespace System
                                              CancellationToken cancellationToken, IProgress<TProgress> progress)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 
@@ -302,13 +303,13 @@ namespace System
             switch (source.Status)
             {
                 case AsyncStatus.Completed:
-                    return Helpers.CompletedTask;
+                    return Task.CompletedTask;
 
                 case AsyncStatus.Error:
-                    return Helpers.TaskFromException<VoidValueTypeParameter>(source.ErrorCode.AttachRestrictedErrorInfo());
+                    return Task.FromException(source.ErrorCode.AttachRestrictedErrorInfo());
 
                 case AsyncStatus.Canceled:
-                    return Helpers.TaskFromCancellation<VoidValueTypeParameter>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
+                    return Task.FromCanceled(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
             }
 
             // Benign race: source may complete here. Things still work, just not taking the fast path.
@@ -386,7 +387,7 @@ namespace System
                                                                CancellationToken cancellationToken, IProgress<TProgress> progress)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 
@@ -419,10 +420,10 @@ namespace System
                     return Task.FromResult(source.GetResults());
 
                 case AsyncStatus.Error:
-                    return Helpers.TaskFromException<TResult>(source.ErrorCode.AttachRestrictedErrorInfo());
+                    return Task.FromException<TResult>(source.ErrorCode.AttachRestrictedErrorInfo());
 
                 case AsyncStatus.Canceled:
-                    return Helpers.TaskFromCancellation<TResult>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
+                    return Task.FromCanceled<TResult>(cancellationToken.IsCancellationRequested ? cancellationToken : new CancellationToken(true));
             }
 
             // Benign race: source may complete here. Things still work, just not taking the fast path.
@@ -456,7 +457,7 @@ namespace System
         public static IAsyncAction AsAsyncAction(this Task source)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 
@@ -467,7 +468,7 @@ namespace System
         public static IAsyncOperation<TResult> AsAsyncOperation<TResult>(this Task<TResult> source)
         {
             if (source == null)
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
 
             Contract.EndContractBlock();
 

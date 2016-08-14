@@ -1,4 +1,8 @@
-﻿using System;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -103,11 +107,32 @@ public static class XmlDictionaryWriterTest
             var t2 = Assert.ThrowsAsync<InvalidOperationException>(() => writer.WriteBase64Async(bytes, 0, byteSize));
 
             InvalidOperationException e = t2.Result;
-            Assert.StrictEqual(e.Message, "An asynchronous operation is already in progress.");
+            bool isAsyncIsRunningException = e.Message.Contains("XmlAsyncIsRunningException") || e.Message.Contains("in progress");
+            Assert.True(isAsyncIsRunningException, "The exception is not XmlAsyncIsRunningException.");
 
             // let the first task complete
             ms.blockAsync(false);
             t1.Wait();
+        }
+    }
+
+    [Fact]
+    public static void XmlDictionaryWriter_InvalidUnicodeChar()
+    {
+        using (var ms = new MemoryStream())
+        {
+            var writer = XmlDictionaryWriter.CreateTextWriter(ms);
+            writer.WriteStartDocument();
+            writer.WriteStartElement("data");
+
+            // This is an invalid char. Writing this char shouldn't
+            // throw exception.
+            writer.WriteString("\uDB1B");
+
+            writer.WriteEndElement();
+            writer.WriteEndDocument();
+            writer.Flush();
+            ms.Position = 0;            
         }
     }
 

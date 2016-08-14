@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using SerializationTypes;
 using System;
@@ -97,6 +98,36 @@ public static partial class XmlSerializerTests
         Assert.StrictEqual(SerializeAndDeserialize<DateTime>(DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc),
 @"<?xml version=""1.0""?>
 <dateTime>9999-12-31T23:59:59.9999999Z</dateTime>"), DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public static void Xml_TypeWithDateTimePropertyAsXmlTime()
+    {
+        DateTime localTime = new DateTime(549269870000L, DateTimeKind.Local);
+        TypeWithDateTimePropertyAsXmlTime localTimeOjbect = new TypeWithDateTimePropertyAsXmlTime()
+        {
+            Value = localTime
+        };
+
+        // This is how we convert DateTime from time to string.
+        var localTimeDateTime = DateTime.MinValue + localTime.TimeOfDay;
+        string localTimeString = localTimeDateTime.ToString("HH:mm:ss.fffffffzzzzzz", DateTimeFormatInfo.InvariantInfo);
+        TypeWithDateTimePropertyAsXmlTime localTimeOjbectRoundTrip = SerializeAndDeserialize(localTimeOjbect,
+string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
+<TypeWithDateTimePropertyAsXmlTime xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">{0}</TypeWithDateTimePropertyAsXmlTime>", localTimeString));
+
+        Assert.StrictEqual(localTimeOjbect.Value, localTimeOjbectRoundTrip.Value);
+
+        TypeWithDateTimePropertyAsXmlTime utcTimeOjbect = new TypeWithDateTimePropertyAsXmlTime()
+        {
+            Value = new DateTime(549269870000L, DateTimeKind.Utc)
+        };
+
+        TypeWithDateTimePropertyAsXmlTime utcTimeRoundTrip = SerializeAndDeserialize(utcTimeOjbect,
+@"<?xml version=""1.0"" encoding=""utf-8""?>
+<TypeWithDateTimePropertyAsXmlTime xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">15:15:26.9870000Z</TypeWithDateTimePropertyAsXmlTime>");
+
+        Assert.StrictEqual(utcTimeOjbect.Value, utcTimeRoundTrip.Value);
     }
 
     [Fact]
@@ -637,7 +668,6 @@ public static partial class XmlSerializerTests
     }
 
     [Fact]
-    [ActiveIssue(846, PlatformID.AnyUnix)]
     public static void Xml_WithXElementWithNestedXElement()
     {
         var original = new WithXElementWithNestedXElement(true);
@@ -656,7 +686,6 @@ public static partial class XmlSerializerTests
     }
 
     [Fact]
-    [ActiveIssue(846, PlatformID.AnyUnix)]
     public static void Xml_WithArrayOfXElement()
     {
         var original = new WithArrayOfXElement(true);
@@ -683,7 +712,6 @@ public static partial class XmlSerializerTests
     }
 
     [Fact]
-    [ActiveIssue(846, PlatformID.AnyUnix)]
     public static void Xml_WithListOfXElement()
     {
         var original = new WithListOfXElement(true);
@@ -1481,6 +1509,9 @@ public static partial class XmlSerializerTests
         Assert.Equal(0, serializers.Length);
     }
 
+#if NET_NATIVE
+    [ActiveIssue(7991)]
+#endif
     [Fact]
     public static void Xml_ConstructorWithXmlRootAttr()
     {
@@ -1496,6 +1527,9 @@ public static partial class XmlSerializerTests
         Assert.True(expected.SequenceEqual(actual));
     }
 
+#if NET_NATIVE
+    [ActiveIssue(7991)]
+#endif
     [Fact]
     public static void Xml_ConstructorWithXmlAttributeOverrides()
     {
@@ -1647,6 +1681,163 @@ public static partial class XmlSerializerTests
         }
     }
 
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlElementAttribute()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlElementAttribute item = new XmlElementAttribute("elem1");
+        attrs.XmlElements.Add(item);
+        Assert.True(attrs.XmlElements.Contains(item));
+
+        attrs.XmlElements.Remove(item);
+        Assert.False(attrs.XmlElements.Contains(item));
+    }
+
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlElementAttribute_ThrowsOnMissingItem()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlElementAttribute item1 = new XmlElementAttribute("elem1");
+        attrs.XmlElements.Add(item1);
+
+        XmlElementAttribute item2 = new XmlElementAttribute("elem2");
+        attrs.XmlElements.Add(item2);
+        Assert.True(attrs.XmlElements.Contains(item1));
+        Assert.True(attrs.XmlElements.Contains(item2));
+
+        attrs.XmlElements.Remove(item2);
+        Assert.False(attrs.XmlElements.Contains(item2));
+
+        Assert.Throws<ArgumentException>(() => { attrs.XmlElements.Remove(item2); });
+    }
+
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlArrayItemAttribute()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlArrayItemAttribute item = new XmlArrayItemAttribute("item1");
+        attrs.XmlArrayItems.Add(item);
+        Assert.True(attrs.XmlArrayItems.Contains(item));
+
+        attrs.XmlArrayItems.Remove(item);
+        Assert.False(attrs.XmlArrayItems.Contains(item));
+    }
+
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlArrayItemAttribute_ThrowsOnMissingItem()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlArrayItemAttribute item1 = new XmlArrayItemAttribute("item1");
+        attrs.XmlArrayItems.Add(item1);
+
+        XmlArrayItemAttribute item2 = new XmlArrayItemAttribute("item2");
+        attrs.XmlArrayItems.Add(item2);
+        Assert.True(attrs.XmlArrayItems.Contains(item1));
+        Assert.True(attrs.XmlArrayItems.Contains(item2));
+
+        attrs.XmlArrayItems.Remove(item2);
+        Assert.False(attrs.XmlArrayItems.Contains(item2));
+
+        Assert.Throws<ArgumentException>(() => { attrs.XmlArrayItems.Remove(item2); });
+    }
+
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlAnyElementAttribute()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlAnyElementAttribute item = new XmlAnyElementAttribute("elem1");
+        attrs.XmlAnyElements.Add(item);
+        Assert.True(attrs.XmlAnyElements.Contains(item));
+
+        attrs.XmlAnyElements.Remove(item);
+        Assert.False(attrs.XmlAnyElements.Contains(item));
+    }
+
+    [Fact]
+    public static void Xml_XmlAttributes_RemoveXmlAnyElementAttributeThrowsOnMissingItem()
+    {
+        XmlAttributes attrs = new XmlAttributes();
+
+        XmlAnyElementAttribute item1 = new XmlAnyElementAttribute("elem1");
+        attrs.XmlAnyElements.Add(item1);
+
+        XmlAnyElementAttribute item2 = new XmlAnyElementAttribute("elem2");
+        attrs.XmlAnyElements.Add(item2);
+        Assert.True(attrs.XmlAnyElements.Contains(item1));
+        Assert.True(attrs.XmlAnyElements.Contains(item2));
+
+        attrs.XmlAnyElements.Remove(item2);
+        Assert.False(attrs.XmlAnyElements.Contains(item2));
+
+        Assert.Throws<ArgumentException>(() => { attrs.XmlAnyElements.Remove(item2); });
+    }
+
+    [Fact]
+    public static void Xml_ArrayOfXmlNodeProperty()
+    {
+        var obj = new TypeWithXmlNodeArrayProperty()
+        {
+            CDATA = new[] { new XmlDocument().CreateCDataSection("test&test") }
+        };
+        var deserializedObj = SerializeAndDeserialize<TypeWithXmlNodeArrayProperty>(obj, @"<TypeWithXmlNodeArrayProperty xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema""><![CDATA[test&test]]></TypeWithXmlNodeArrayProperty>");
+        Assert.Equal(obj.CDATA.Length, deserializedObj.CDATA.Length);
+        Assert.Equal(obj.CDATA[0].InnerText, deserializedObj.CDATA[0].InnerText);
+    }
+
+    [Fact]
+    public static void Xml_TypeWithTwoDimensionalArrayProperty1()
+    {
+        SimpleType[][] simpleType2D = GetObjectwith2DArrayOfSimpleType();
+
+        var obj = new TypeWith2DArrayProperty1()
+        {
+            TwoDArrayOfSimpleType = simpleType2D
+        };
+
+        string baseline = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<TypeWith2DArrayProperty1 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n  <TwoDArrayOfSimpleType>\r\n    <ArrayOfSimpleType>\r\n      <SimpleType>\r\n        <P1>0 0 value</P1>\r\n        <P2>1</P2>\r\n      </SimpleType>\r\n      <SimpleType>\r\n        <P1>0 1 value</P1>\r\n        <P2>2</P2>\r\n      </SimpleType>\r\n    </ArrayOfSimpleType>\r\n    <ArrayOfSimpleType>\r\n      <SimpleType>\r\n        <P1>1 0 value</P1>\r\n        <P2>3</P2>\r\n      </SimpleType>\r\n      <SimpleType>\r\n        <P1>1 1 value</P1>\r\n        <P2>4</P2>\r\n      </SimpleType>\r\n    </ArrayOfSimpleType>\r\n  </TwoDArrayOfSimpleType>\r\n</TypeWith2DArrayProperty1>";
+        TypeWith2DArrayProperty1 actual = SerializeAndDeserialize(obj, baseline);
+        Assert.NotNull(actual);
+        Assert.True(SimpleType.AreEqual(simpleType2D[0][0], actual.TwoDArrayOfSimpleType[0][0]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[0][1], actual.TwoDArrayOfSimpleType[0][1]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[1][0], actual.TwoDArrayOfSimpleType[1][0]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[1][1], actual.TwoDArrayOfSimpleType[1][1]));
+    }
+
+    [Fact]
+    public static void Xml_TypeWithTwoDimensionalArrayProperty2()
+    {
+        SimpleType[][] simpleType2D = GetObjectwith2DArrayOfSimpleType();
+
+        var obj = new TypeWith2DArrayProperty2()
+        {
+            TwoDArrayOfSimpleType = simpleType2D
+        };
+
+        string baseline = "<?xml version=\"1.0\" encoding=\"utf - 8\"?>\r\n<TypeWith2DArrayProperty2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n  <TwoDArrayOfSimpleType>\r\n    <SimpleType>\r\n      <SimpleType>\r\n        <P1>0 0 value</P1>\r\n        <P2>1</P2>\r\n      </SimpleType>\r\n      <SimpleType>\r\n        <P1>0 1 value</P1>\r\n        <P2>2</P2>\r\n      </SimpleType>\r\n    </SimpleType>\r\n    <SimpleType>\r\n      <SimpleType>\r\n        <P1>1 0 value</P1>\r\n        <P2>3</P2>\r\n      </SimpleType>\r\n      <SimpleType>\r\n        <P1>1 1 value</P1>\r\n        <P2>4</P2>\r\n      </SimpleType>\r\n    </SimpleType>\r\n  </TwoDArrayOfSimpleType>\r\n</TypeWith2DArrayProperty2>";
+        TypeWith2DArrayProperty2 actual = SerializeAndDeserialize(obj, baseline);
+        Assert.NotNull(actual);
+        Assert.True(SimpleType.AreEqual(simpleType2D[0][0], actual.TwoDArrayOfSimpleType[0][0]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[0][1], actual.TwoDArrayOfSimpleType[0][1]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[1][0], actual.TwoDArrayOfSimpleType[1][0]));
+        Assert.True(SimpleType.AreEqual(simpleType2D[1][1], actual.TwoDArrayOfSimpleType[1][1]));
+    }
+
+    static SimpleType[][] GetObjectwith2DArrayOfSimpleType()
+    {
+        SimpleType[][] simpleType2D = new SimpleType[2][];
+        simpleType2D[0] = new SimpleType[2];
+        simpleType2D[1] = new SimpleType[2];
+        simpleType2D[0][0] = new SimpleType() { P1 = "0 0 value", P2 = 1 };
+        simpleType2D[0][1] = new SimpleType() { P1 = "0 1 value", P2 = 2 };
+        simpleType2D[1][0] = new SimpleType() { P1 = "1 0 value", P2 = 3 };
+        simpleType2D[1][1] = new SimpleType() { P1 = "1 1 value", P2 = 4 };
+        return simpleType2D;
+    }
     private static T SerializeAndDeserialize<T>(T value, string baseline, Func<XmlSerializer> serializerFactory = null,
         bool skipStringCompare = false, XmlSerializerNamespaces xns = null)
     {

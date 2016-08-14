@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 
@@ -123,16 +124,7 @@ namespace Windows.UI
 
         public override bool Equals(object o)
         {
-            if (o is Color)
-            {
-                Color color = (Color)o;
-
-                return (this == color);
-            }
-            else
-            {
-                return false;
-            }
+            return o is Color && this == (Color)o;
         }
 
         public bool Equals(Color color)
@@ -142,26 +134,11 @@ namespace Windows.UI
 
         public static bool operator ==(Color color1, Color color2)
         {
-            if (color1.R != color2.R)
-            {
-                return false;
-            }
-
-            if (color1.G != color2.G)
-            {
-                return false;
-            }
-
-            if (color1.B != color2.B)
-            {
-                return false;
-            }
-
-            if (color1.A != color2.A)
-            {
-                return false;
-            }
-            return true;
+            return
+                color1.R == color2.R &&
+                color1.G == color2.G &&
+                color1.B == color2.B &&
+                color1.A == color2.A;
         }
 
         public static bool operator !=(Color color1, Color color2)

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Text;
@@ -9,7 +10,7 @@ namespace System.IO
     /// <summary>Contains internal path helpers that are shared between many projects.</summary>
     internal static partial class PathInternal
     {
-        // Therre is only one invalid path character in Unix
+        // There is only one invalid path character in Unix
         private const char InvalidPathChar = '\0';
         internal static readonly char[] InvalidPathChars = { InvalidPathChar };
 
@@ -30,7 +31,7 @@ namespace System.IO
 
         internal static bool IsDirectorySeparator(char c)
         {
-            // The alternatie directory separator char is the same as the directory separator,
+            // The alternate directory separator char is the same as the directory separator,
             // so we only need to check one.
             Debug.Assert(Path.DirectorySeparatorChar == Path.AltDirectorySeparatorChar);
             return c == Path.DirectorySeparatorChar;
@@ -89,6 +90,19 @@ namespace System.IO
             }
 
             return builder.ToString();
+        }
+        
+        /// <summary>
+        /// Returns true if the character is a directory or volume separator.
+        /// </summary>
+        /// <param name="ch">The character to test.</param>
+        internal static bool IsDirectoryOrVolumeSeparator(char ch)
+        {
+            // The directory separator, volume separator, and the alternate directory
+            // separator should be the same on Unix, so we only need to check one.
+            Debug.Assert(Path.DirectorySeparatorChar == Path.AltDirectorySeparatorChar);
+            Debug.Assert(Path.DirectorySeparatorChar == Path.VolumeSeparatorChar);
+            return ch == Path.DirectorySeparatorChar;
         }
     }
 }

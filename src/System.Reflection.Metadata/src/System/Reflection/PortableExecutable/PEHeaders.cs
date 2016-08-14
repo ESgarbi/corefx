@@ -1,8 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Immutable;
 using System.IO;
+using System.Reflection.Internal;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 
@@ -32,7 +34,7 @@ namespace System.Reflection.PortableExecutable
         /// <exception cref="ArgumentException">The stream doesn't support seek operations.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="peStream"/> is null.</exception>
         public PEHeaders(Stream peStream)
-           : this(peStream, null)
+           : this(peStream, 0)
         {
         }
 
@@ -47,24 +49,19 @@ namespace System.Reflection.PortableExecutable
         /// <exception cref="ArgumentNullException"><paramref name="peStream"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Size is negative or extends past the end of the stream.</exception>
         public PEHeaders(Stream peStream, int size)
-            : this(peStream, (int?)size)
-        {
-        }
-
-        private PEHeaders(Stream peStream, int? sizeOpt)
         {
             if (peStream == null)
             {
-                throw new ArgumentNullException("peStream");
+                throw new ArgumentNullException(nameof(peStream));
             }
 
             if (!peStream.CanRead || !peStream.CanSeek)
             {
-                throw new ArgumentException(SR.StreamMustSupportReadAndSeek, "peStream");
+                throw new ArgumentException(SR.StreamMustSupportReadAndSeek, nameof(peStream));
             }
 
-            int size = PEBinaryReader.GetAndValidateSize(peStream, sizeOpt);
-            var reader = new PEBinaryReader(peStream, size);
+            int actualSize = StreamExtensions.GetAndValidateSize(peStream, size, nameof(peStream));
+            var reader = new PEBinaryReader(peStream, actualSize);
 
             bool isCoffOnly;
             SkipDosHeader(ref reader, out isCoffOnly);
@@ -83,7 +80,7 @@ namespace System.Reflection.PortableExecutable
             if (!isCoffOnly)
             {
                 int offset;
-                if (TryCalculateCorHeaderOffset(size, out offset))
+                if (TryCalculateCorHeaderOffset(actualSize, out offset))
                 {
                     _corHeaderStartOffset = offset;
                     reader.Seek(offset);
@@ -91,7 +88,7 @@ namespace System.Reflection.PortableExecutable
                 }
             }
 
-            CalculateMetadataLocation(size, out _metadataStartOffset, out _metadataSize);
+            CalculateMetadataLocation(actualSize, out _metadataStartOffset, out _metadataSize);
         }
 
         /// <summary>
@@ -210,7 +207,7 @@ namespace System.Reflection.PortableExecutable
 
         private bool TryCalculateCorHeaderOffset(long peStreamSize, out int startOffset)
         {
-            if (!TryGetDirectoryOffset(_peHeader.CorHeaderTableDirectory, out startOffset))
+            if (!TryGetDirectoryOffset(_peHeader.CorHeaderTableDirectory, out startOffset, canCrossSectionBoundary: false))
             {
                 startOffset = -1;
                 return false;
@@ -288,13 +285,17 @@ namespace System.Reflection.PortableExecutable
         }
 
         /// <summary>
-        /// Gets the offset (in bytes) from the start of the image to the given directory entry.
+        /// Gets the offset (in bytes) from the start of the image to the given directory data.
         /// </summary>
-        /// <param name="directory"></param>
-        /// <param name="offset"></param>
-        /// <returns>The section containing the directory could not be found.</returns>
-        /// <exception cref="BadImageFormatException">The section containing the</exception>
+        /// <param name="directory">PE directory entry</param>
+        /// <param name="offset">Offset from the start of the image to the given directory data</param>
+        /// <returns>True if the directory data is found, false otherwise.</returns>
         public bool TryGetDirectoryOffset(DirectoryEntry directory, out int offset)
+        {
+            return TryGetDirectoryOffset(directory, out offset, canCrossSectionBoundary: true);
+        }
+
+        internal bool TryGetDirectoryOffset(DirectoryEntry directory, out int offset, bool canCrossSectionBoundary)
         {
             int sectionIndex = GetContainingSectionIndex(directory.RelativeVirtualAddress);
             if (sectionIndex < 0)
@@ -304,7 +305,7 @@ namespace System.Reflection.PortableExecutable
             }
 
             int relativeOffset = directory.RelativeVirtualAddress - _sectionHeaders[sectionIndex].VirtualAddress;
-            if (directory.Size > _sectionHeaders[sectionIndex].VirtualSize - relativeOffset)
+            if (!canCrossSectionBoundary && directory.Size > _sectionHeaders[sectionIndex].VirtualSize - relativeOffset)
             {
                 throw new BadImageFormatException(SR.SectionTooSmall);
             }
@@ -371,7 +372,7 @@ namespace System.Reflection.PortableExecutable
             }
             else
             {
-                if (!TryGetDirectoryOffset(_corHeader.MetadataDirectory, out start))
+                if (!TryGetDirectoryOffset(_corHeader.MetadataDirectory, out start, canCrossSectionBoundary: false))
                 {
                     throw new BadImageFormatException(SR.MissingDataDirectory);
                 }

@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Runtime.Serialization
 {
@@ -168,13 +169,13 @@ namespace System.Runtime.Serialization
         {
             get
             {
-                return false;
+                return UnderlyingType == Globals.TypeOfXmlElement || UnderlyingType == Globals.TypeOfXmlNodeArray;
             }
         }
         [SecurityCritical]
 
         /// <SecurityNote>
-        /// Critical - holds all state used for for (de)serializing XML types.
+        /// Critical - holds all state used for (de)serializing XML types.
         ///            since the data is cached statically, we lock down access to it.
         /// </SecurityNote>
         private class XmlDataContractCriticalHelper : DataContract.DataContractCriticalHelper
@@ -321,7 +322,7 @@ namespace System.Runtime.Serialization
         {
             Type type = this.UnderlyingType;
             CodeGenerator ilg = new CodeGenerator();
-            bool memberAccessFlag = RequiresMemberAccessForCreate(null, Globals.DataContractSerializationPatterns) && !(type.FullName == "System.Xml.Linq.XElement");
+            bool memberAccessFlag = RequiresMemberAccessForCreate(null) && !(type.FullName == "System.Xml.Linq.XElement");
             try
             {
                 ilg.BeginMethod("Create" + DataContract.GetClrTypeFullName(type), typeof(CreateXmlSerializableDelegate), memberAccessFlag);
@@ -330,7 +331,7 @@ namespace System.Runtime.Serialization
             {
                 if (memberAccessFlag)
                 {
-                    RequiresMemberAccessForCreate(securityException, Globals.DataContractSerializationPatterns);
+                    RequiresMemberAccessForCreate(securityException);
                 }
                 else
                 {
@@ -383,9 +384,9 @@ namespace System.Runtime.Serialization
         ///          since this information is used to determine whether to give the generated code access
         ///          permissions to private members, any changes to the logic should be reviewed.
         /// </SecurityNote>
-        private bool RequiresMemberAccessForCreate(SecurityException securityException, string[] serializationAssemblyPatterns)
+        private bool RequiresMemberAccessForCreate(SecurityException securityException)
         {
-            if (!IsTypeVisible(UnderlyingType, serializationAssemblyPatterns))
+            if (!IsTypeVisible(UnderlyingType))
             {
                 if (securityException != null)
                 {
@@ -396,7 +397,7 @@ namespace System.Runtime.Serialization
                 return true;
             }
 
-            if (ConstructorRequiresMemberAccess(GetConstructor(), serializationAssemblyPatterns))
+            if (ConstructorRequiresMemberAccess(GetConstructor()))
             {
                 if (securityException != null)
                 {

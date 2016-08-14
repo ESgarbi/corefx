@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics.Tracing;
 #if USE_ETW // TODO: Enable when TraceEvent is available on CoreCLR. GitHub issue #4864.
@@ -45,13 +46,19 @@ namespace BasicEventSourceTests
         [Fact]
         public void Test_Write_Metric_EventListener()
         {
-            Test_Write_Metric(new EventListenerListener());
+            using (var listener = new EventListenerListener())
+            {
+                Test_Write_Metric(listener);
+            }
         }
 
         [Fact]
         public void Test_Write_Metric_ETW()
         {
-            Test_Write_Metric(new EtwListener());
+            using (var listener = new EtwListener())
+            {
+                Test_Write_Metric(listener);
+            }
         }
 
         private void Test_Write_Metric(Listener listener)

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -93,7 +94,38 @@ namespace System.IO
 
         public Task CopyToAsync(Stream destination)
         {
-            return CopyToAsync(destination, DefaultCopyBufferSize);
+            int bufferSize = DefaultCopyBufferSize;
+
+            if (CanSeek)
+            {
+                long length = Length;
+                long position = Position;
+                if (length <= position) // Handles negative overflows
+                {
+                    // If we go down this branch, it means there are
+                    // no bytes left in this stream.
+
+                    // Ideally we would just return Task.CompletedTask here,
+                    // but CopyToAsync(Stream, int, CancellationToken) was already
+                    // virtual at the time this optimization was introduced. So
+                    // if it does things like argument validation (checking if destination
+                    // is null and throwing an exception), then await fooStream.CopyToAsync(null)
+                    // would no longer throw if there were no bytes left. On the other hand,
+                    // we also can't roll our own argument validation and return Task.CompletedTask,
+                    // because it would be a breaking change if the stream's override didn't throw before,
+                    // or in a different order. So for simplicity, we just set the bufferSize to 1
+                    // (not 0 since the default implementation throws for 0) and forward to the virtual method.
+                    bufferSize = 1; 
+                }
+                else
+                {
+                    long remaining = length - position;
+                    if (remaining > 0) // In the case of a positive overflow, stick to the default size
+                        bufferSize = (int)Math.Min(bufferSize, remaining);
+                }
+            }
+            
+            return CopyToAsync(destination, bufferSize);
         }
 
         public Task CopyToAsync(Stream destination, int bufferSize)
@@ -103,30 +135,7 @@ namespace System.IO
 
         public virtual Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            if (destination == null)
-            {
-                throw new ArgumentNullException("destination");
-            }
-            if (bufferSize <= 0)
-            {
-                throw new ArgumentOutOfRangeException("bufferSize", SR.ArgumentOutOfRange_NeedPosNum);
-            }
-            if (!CanRead && !CanWrite)
-            {
-                throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
-            }
-            if (!destination.CanRead && !destination.CanWrite)
-            {
-                throw new ObjectDisposedException("destination", SR.ObjectDisposed_StreamClosed);
-            }
-            if (!CanRead)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnreadableStream);
-            }
-            if (!destination.CanWrite)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnwritableStream);
-            }
+            ValidateCopyToArguments(destination, bufferSize);
 
             return CopyToAsyncInternal(destination, bufferSize, cancellationToken);
         }
@@ -151,66 +160,33 @@ namespace System.IO
         // the current position.
         public void CopyTo(Stream destination)
         {
-            if (destination == null)
-            {
-                throw new ArgumentNullException("destination");
-            }
-            if (!CanRead && !CanWrite)
-            {
-                throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
-            }
-            if (!destination.CanRead && !destination.CanWrite)
-            {
-                throw new ObjectDisposedException("destination", SR.ObjectDisposed_StreamClosed);
-            }
-            if (!CanRead)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnreadableStream);
-            }
-            if (!destination.CanWrite)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnwritableStream);
-            }
+            int bufferSize = DefaultCopyBufferSize;
 
-            InternalCopyTo(destination, DefaultCopyBufferSize);
+            if (CanSeek)
+            {
+                long length = Length;
+                long position = Position;
+                if (length <= position) // Handles negative overflows
+                {
+                    // No bytes left in stream
+                    // Call the other overload with a bufferSize of 1,
+                    // in case it's made virtual in the future
+                    bufferSize = 1;
+                }
+                else
+                {
+                    long remaining = length - position;
+                    if (remaining > 0) // In the case of a positive overflow, stick to the default size
+                        bufferSize = (int)Math.Min(bufferSize, remaining);
+                }
+            }
+            
+            CopyTo(destination, bufferSize);
         }
 
         public void CopyTo(Stream destination, int bufferSize)
         {
-            if (destination == null)
-            {
-                throw new ArgumentNullException("destination");
-            }
-            if (bufferSize <= 0)
-            {
-                throw new ArgumentOutOfRangeException("bufferSize", SR.ArgumentOutOfRange_NeedPosNum);
-            }
-            if (!CanRead && !CanWrite)
-            {
-                throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
-            }
-            if (!destination.CanRead && !destination.CanWrite)
-            {
-                throw new ObjectDisposedException("destination", SR.ObjectDisposed_StreamClosed);
-            }
-            if (!CanRead)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnreadableStream);
-            }
-            if (!destination.CanWrite)
-            {
-                throw new NotSupportedException(SR.NotSupported_UnwritableStream);
-            }
-
-            InternalCopyTo(destination, bufferSize);
-        }
-
-        private void InternalCopyTo(Stream destination, int bufferSize)
-        {
-            Debug.Assert(destination != null);
-            Debug.Assert(CanRead);
-            Debug.Assert(destination.CanWrite);
-            Debug.Assert(bufferSize > 0);
+            ValidateCopyToArguments(destination, bufferSize);
 
             byte[] buffer = new byte[bufferSize];
             int read;
@@ -220,13 +196,11 @@ namespace System.IO
             }
         }
 
-
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
 
         protected virtual void Dispose(bool disposing)
         {
@@ -246,7 +220,7 @@ namespace System.IO
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                return new Task(() => { }, cancellationToken);
+                return Task.FromCanceled(cancellationToken);
             }
 
             return Task.Factory.StartNew(state => ((Stream)state).Flush(), this,
@@ -267,32 +241,26 @@ namespace System.IO
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return new Task<int>(() => 0, cancellationToken);
+                return Task.FromCanceled<int>(cancellationToken);
             }
 
-            return ReadAsyncTask(buffer, offset, count, cancellationToken);
-        }
-
-        private async Task<int> ReadAsyncTask(Byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
             // To avoid a race with a stream's position pointer & generating race 
             // conditions with internal buffer indexes in our own streams that 
             // don't natively support async IO operations when there are multiple 
-            // async requests outstanding, we will block the application's main
-            // thread if it does a second IO request until the first one completes.
-            EnsureAsyncActiveSemaphoreInitialized().Wait();
-
-            try
+            // async requests outstanding, we will serialize the requests.
+            return EnsureAsyncActiveSemaphoreInitialized().WaitAsync().ContinueWith((completedWait, s) =>
             {
-                return await Task.Factory.StartNew(() => Read(buffer, offset, count),
-                    cancellationToken,
-                    TaskCreationOptions.DenyChildAttach,
-                    TaskScheduler.Default);
-            }
-            finally
-            {
-                _asyncActiveSemaphore.Release();
-            }
+                Debug.Assert(completedWait.Status == TaskStatus.RanToCompletion);
+                var state = (Tuple<Stream, byte[], int, int>)s;
+                try
+                {
+                    return state.Item1.Read(state.Item2, state.Item3, state.Item4); // this.Read(buffer, offset, count);
+                }
+                finally
+                {
+                    state.Item1._asyncActiveSemaphore.Release();
+                }
+            }, Tuple.Create(this, buffer, offset, count), CancellationToken.None, TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
         }
 
         public Task WriteAsync(Byte[] buffer, int offset, int count)
@@ -309,32 +277,26 @@ namespace System.IO
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return new Task(() => { }, cancellationToken);
+                return Task.FromCanceled(cancellationToken);
             }
 
-            return WriteAsyncTask(buffer, offset, count, cancellationToken);
-        }
-
-        private async Task WriteAsyncTask(Byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
             // To avoid a race with a stream's position pointer & generating race 
             // conditions with internal buffer indexes in our own streams that 
             // don't natively support async IO operations when there are multiple 
-            // async requests outstanding, we will block the application's main
-            // thread if it does a second IO request until the first one completes.
-            EnsureAsyncActiveSemaphoreInitialized().Wait();
-
-            try
+            // async requests outstanding, we will serialize the requests.
+            return EnsureAsyncActiveSemaphoreInitialized().WaitAsync().ContinueWith((completedWait, s) =>
             {
-                await Task.Factory.StartNew(() => Write(buffer, offset, count),
-                    cancellationToken,
-                    TaskCreationOptions.DenyChildAttach,
-                    TaskScheduler.Default);
-            }
-            finally
-            {
-                _asyncActiveSemaphore.Release();
-            }
+                Debug.Assert(completedWait.Status == TaskStatus.RanToCompletion);
+                var state = (Tuple<Stream, byte[], int, int>)s;
+                try
+                {
+                    state.Item1.Write(state.Item2, state.Item3, state.Item4); // this.Write(buffer, offset, count);
+                }
+                finally
+                {
+                    state.Item1._asyncActiveSemaphore.Release();
+                }
+            }, Tuple.Create(this, buffer, offset, count), CancellationToken.None, TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
         }
 
         public abstract long Seek(long offset, SeekOrigin origin);
@@ -373,6 +335,34 @@ namespace System.IO
             oneByteArray[0] = value;
             Write(oneByteArray, 0, 1);
         }
+        
+        internal void ValidateCopyToArguments(Stream destination, int bufferSize)
+        {
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+            if (bufferSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bufferSize), SR.ArgumentOutOfRange_NeedPosNum);
+            }
+            if (!CanRead && !CanWrite)
+            {
+                throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
+            }
+            if (!destination.CanRead && !destination.CanWrite)
+            {
+                throw new ObjectDisposedException(nameof(destination), SR.ObjectDisposed_StreamClosed);
+            }
+            if (!CanRead)
+            {
+                throw new NotSupportedException(SR.NotSupported_UnreadableStream);
+            }
+            if (!destination.CanWrite)
+            {
+                throw new NotSupportedException(SR.NotSupported_UnwritableStream);
+            }
+        }
 
         private sealed class NullStream : Stream
         {
@@ -408,6 +398,17 @@ namespace System.IO
             {
                 get { return 0; }
                 set { }
+            }
+            
+            public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+            {
+                // Validate arguments for compat, since previously this
+                // method was inherited from Stream, which did check its arguments.
+                ValidateCopyToArguments(destination, bufferSize);
+                
+                return cancellationToken.IsCancellationRequested ?
+                    Task.FromCanceled(cancellationToken) :
+                    Task.CompletedTask;
             }
 
             protected override void Dispose(bool disposing)

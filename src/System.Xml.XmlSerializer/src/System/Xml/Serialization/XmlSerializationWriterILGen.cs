@@ -1,8 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -50,10 +48,9 @@ namespace System.Xml.Serialization
 
         internal override void GenerateMethod(TypeMapping mapping)
         {
-            if (GeneratedMethods.Contains(mapping))
+            if (!GeneratedMethods.Add(mapping))
                 return;
 
-            GeneratedMethods[mapping] = mapping;
             if (mapping is StructMapping)
             {
                 WriteStructMethod((StructMapping)mapping);
@@ -77,13 +74,13 @@ namespace System.Xml.Serialization
             if (!xmlMapping.IsWriteable)
                 return null;
             if (!xmlMapping.GenerateSerializer)
-                throw new ArgumentException(SR.XmlInternalError, "xmlMapping");
+                throw new ArgumentException(SR.XmlInternalError, nameof(xmlMapping));
             if (xmlMapping is XmlTypeMapping)
                 return GenerateTypeElement((XmlTypeMapping)xmlMapping);
             else if (xmlMapping is XmlMembersMapping)
                 return GenerateMembersElement((XmlMembersMapping)xmlMapping);
             else
-                throw new ArgumentException(SR.XmlInternalError, "xmlMapping");
+                throw new ArgumentException(SR.XmlInternalError, nameof(xmlMapping));
         }
 
         private void GenerateInitCallbacksMethod()
@@ -600,7 +597,8 @@ namespace System.Xml.Serialization
 
         private void WriteEnumMethod(EnumMapping mapping)
         {
-            string methodName = (string)MethodNames[mapping];
+            string methodName;
+            MethodNames.TryGetValue(mapping, out methodName);
             List<Type> argTypes = new List<Type>();
             List<string> argNames = new List<string>();
             argTypes.Add(mapping.TypeDesc.Type);
@@ -619,7 +617,7 @@ namespace System.Xml.Serialization
 
             if (constants.Length > 0)
             {
-                InternalHashtable values = new InternalHashtable();
+                var values = new HashSet<long>();
                 List<Label> caseLabels = new List<Label>();
                 List<string> retValues = new List<string>();
                 Label defaultLabel = ilg.DefineLabel();
@@ -631,7 +629,7 @@ namespace System.Xml.Serialization
                 for (int i = 0; i < constants.Length; i++)
                 {
                     ConstantMapping c = constants[i];
-                    if (values[c.Value] == null)
+                    if (values.Add(c.Value))
                     {
                         Label caseLabel = ilg.DefineLabel();
                         ilg.Ldloc(localTmp);
@@ -639,7 +637,6 @@ namespace System.Xml.Serialization
                         ilg.Beq(caseLabel);
                         caseLabels.Add(caseLabel);
                         retValues.Add(GetCSharpString(c.XmlName));
-                        values.Add(c.Value, c.Value);
                     }
                 }
 
@@ -913,7 +910,8 @@ namespace System.Xml.Serialization
 
         private void WriteStructMethod(StructMapping mapping)
         {
-            string methodName = (string)MethodNames[mapping];
+            string methodName;
+            MethodNames.TryGetValue(mapping, out methodName);
 
             ilg = new CodeGenerator(this.typeBuilder);
             List<Type> argTypes = new List<Type>(5);
@@ -1563,7 +1561,7 @@ namespace System.Xml.Serialization
                     doEndIf = true;
                 }
                 int anyCount = 0;
-                ArrayList namedAnys = new ArrayList();
+                var namedAnys = new List<ElementAccessor>();
                 ElementAccessor unnamedAny = null; // can only have one
                 bool wroteFirstIf = false;
                 string enumTypeName = choice == null ? null : choice.Mapping.TypeDesc.FullName;

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -571,7 +572,6 @@ namespace System.Reflection.Metadata.Ecma335
     internal struct GuidStreamReader
     {
         internal readonly MemoryBlock Block;
-        internal const int GuidSize = 16;
 
         public GuidStreamReader(MemoryBlock block)
         {
@@ -587,7 +587,7 @@ namespace System.Reflection.Metadata.Ecma335
 
             // Metadata Spec: The Guid heap is an array of GUIDs, each 16 bytes wide. 
             // Its first element is numbered 1, its second 2, and so on.
-            return this.Block.PeekGuid((handle.Index - 1) * GuidSize);
+            return this.Block.PeekGuid((handle.Index - 1) * BlobUtilities.SizeOfGuid);
         }
     }
 

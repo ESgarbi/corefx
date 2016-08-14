@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections;
 
@@ -105,33 +106,6 @@ namespace System.Net.Primitives.Functional.Tests
             CookieCollection cc = new CookieCollection();
 
             Assert.Throws<ArgumentNullException>(() => cc.Add((CookieCollection)null));
-        }
-
-        [Fact]
-        public static void IndexSubscript_Get_Success()
-        {
-            CookieCollection cc = CreateCookieCollection1();
-
-            Assert.Equal(cc[0], c1);
-            Assert.Equal(cc[1], c2);
-            Assert.Equal(cc[2], c3);
-            Assert.Equal(cc[3], c4);
-            Assert.Equal(cc[4], c5);
-
-            Assert.Equal(cc["name1"], c1);
-            Assert.Equal(cc["name2"], c2);
-            Assert.Equal(cc["name3"], c4);
-        }
-
-        [Fact]
-        public static void IndexSubscript_Get_Invalid()
-        {
-            CookieCollection cc = CreateCookieCollection1();
-
-            Assert.Throws<ArgumentOutOfRangeException>(() => cc[-1]); // Index < 0
-            Assert.Throws<ArgumentOutOfRangeException>(() => cc[cc.Count]); // Index >= Count
-
-            Assert.Null(cc["no such name"]);
         }
 
         [Fact]

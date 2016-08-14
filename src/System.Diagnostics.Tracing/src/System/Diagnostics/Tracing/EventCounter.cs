@@ -1,4 +1,8 @@
-﻿using System;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -26,12 +30,12 @@ namespace System.Diagnostics.Tracing
         {
             if (name == null)
             {
-                throw new ArgumentNullException("name");
+                throw new ArgumentNullException(nameof(name));
             }
 
             if (eventSource == null)
             {
-                throw new ArgumentNullException("eventSource");
+                throw new ArgumentNullException(nameof(eventSource));
             }
 
             InitializeBuffer();
@@ -265,7 +269,7 @@ namespace System.Diagnostics.Tracing
 
         internal static void AddEventCounter(EventSource eventSource, EventCounter eventCounter)
         {
-            int eventSourceIndex = EventListener.EventSourceIndex(eventSource);
+            int eventSourceIndex = EventListenerHelper.EventSourceIndex(eventSource);
 
             EventCounterGroup.EnsureEventSourceIndexAvailable(eventSourceIndex);
             EventCounterGroup eventCounterGroup = GetEventCounterGroup(eventSource);
@@ -281,14 +285,14 @@ namespace System.Diagnostics.Tracing
             else if (eventSourceIndex >= EventCounterGroup.s_eventCounterGroups.Length)
             {
                 EventCounterGroup[] newEventCounterGroups = new EventCounterGroup[eventSourceIndex + 1];
-                Array.Copy(EventCounterGroup.s_eventCounterGroups, newEventCounterGroups, EventCounterGroup.s_eventCounterGroups.Length);
+                Array.Copy(EventCounterGroup.s_eventCounterGroups, 0, newEventCounterGroups, 0, EventCounterGroup.s_eventCounterGroups.Length);
                 EventCounterGroup.s_eventCounterGroups = newEventCounterGroups;
             }
         }
 
         private static EventCounterGroup GetEventCounterGroup(EventSource eventSource)
         {
-            int eventSourceIndex = EventListener.EventSourceIndex(eventSource);
+            int eventSourceIndex = EventListenerHelper.EventSourceIndex(eventSource);
             EventCounterGroup result = EventCounterGroup.s_eventCounterGroups[eventSourceIndex];
             if (result == null)
             {
@@ -426,6 +430,14 @@ namespace System.Diagnostics.Tracing
         }
 
         #endregion // Implementation of the IDisposable interface
+    }
+
+    // This class a work-around because .NET V4.6.2 did not make EventSourceIndex public (it was only protected)
+    // We make this helper class to get around that protection.   We want V4.6.3 to make this public at which
+    // point this class is no longer needed and can be removed.
+    internal class EventListenerHelper : EventListener {
+        public new static int EventSourceIndex(EventSource eventSource) { return EventListener.EventSourceIndex(eventSource); }
+        protected override void OnEventWritten(EventWrittenEventArgs eventData) { } // override abstact methods to keep compiler happy
     }
 
     #endregion // internal supporting classes

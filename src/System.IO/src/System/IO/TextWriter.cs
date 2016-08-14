@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Text;
 using System.Threading;
@@ -19,20 +20,8 @@ namespace System.IO
     {
         public static readonly TextWriter Null = new NullTextWriter();
 
-        // This should be initialized to Environment.NewLine, but
-        // to avoid loading Environment unnecessarily so I've duplicated
-        // the value here.
-#if !PLATFORM_UNIX
-        private const string InitialNewLine = "\r\n";
-
-        protected char[] CoreNewLine = new char[] { '\r', '\n' };
-        private string CoreNewLineStr = "\r\n";
-#else
-        private const string InitialNewLine = "\n";
-
-        protected char[] CoreNewLine = new char[] { '\n' };
-        private string CoreNewLineStr = "\n";
-#endif // !PLATFORM_UNIX
+        protected char[] CoreNewLine = Environment.NewLine.ToCharArray();
+        private string CoreNewLineStr = Environment.NewLine;
 
         // Can be null - if so, ask for the Thread's CurrentCulture every time.
         private IFormatProvider _internalFormatProvider;
@@ -101,7 +90,7 @@ namespace System.IO
             {
                 if (value == null)
                 {
-                    value = InitialNewLine;
+                    value = Environment.NewLine;
                 }
 
                 CoreNewLineStr = value;
@@ -136,15 +125,15 @@ namespace System.IO
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer", SR.ArgumentNull_Buffer);
+                throw new ArgumentNullException(nameof(buffer), SR.ArgumentNull_Buffer);
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(index), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (buffer.Length - index < count)
             {
@@ -288,8 +277,7 @@ namespace System.IO
 
 
         // Writes a line terminator to the text stream. The default line terminator
-        // is a carriage return followed by a line feed ("\r\n"), but this value
-        // can be changed by setting the NewLine property.
+        // is Environment.NewLine, but this value can be changed by setting the NewLine property.
         //
         public virtual void WriteLine()
         {
@@ -488,19 +476,11 @@ namespace System.IO
         {
             if (buffer == null)
             {
-                return MakeCompletedTask();
+                return Task.CompletedTask;
             }
 
             return WriteAsync(buffer, 0, buffer.Length);
         }
-
-#pragma warning disable 1998 // async method with no await
-        private async Task MakeCompletedTask()
-        {
-            // do nothing.  We're taking advantage of the async infrastructure's optimizations, one of which is to
-            // return a cached already-completed Task when possible.
-        }
-#pragma warning restore 1998
 
         public virtual Task WriteAsync(char[] buffer, int index, int count)
         {
@@ -539,7 +519,7 @@ namespace System.IO
         {
             if (buffer == null)
             {
-                return MakeCompletedTask();
+                return Task.CompletedTask;
             }
 
             return WriteLineAsync(buffer, 0, buffer.Length);

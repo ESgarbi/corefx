@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -36,7 +37,7 @@ namespace System.Linq.Expressions.Interpreter
                     // We cannot have null in a non-lifted numeric context. Throw the exception
                     // about not Nullable object requiring a value.
                     converted = (int)(int?)obj;
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
                 }
             }
             else
@@ -76,6 +77,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 switch (_from)
                 {
+                    case TypeCode.Boolean: return ConvertInt32((Boolean)obj ? 1 : 0);
                     case TypeCode.Byte: return ConvertInt32((Byte)obj);
                     case TypeCode.SByte: return ConvertInt32((SByte)obj);
                     case TypeCode.Int16: return ConvertInt32((Int16)obj);
@@ -87,7 +89,7 @@ namespace System.Linq.Expressions.Interpreter
                     case TypeCode.UInt64: return ConvertUInt64((UInt64)obj);
                     case TypeCode.Single: return ConvertDouble((Single)obj);
                     case TypeCode.Double: return ConvertDouble((Double)obj);
-                    default: throw Assert.Unreachable;
+                    default: throw ContractUtils.Unreachable;
                 }
             }
 
@@ -108,7 +110,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -130,7 +132,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -152,7 +154,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -174,7 +176,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -194,6 +196,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 switch (_from)
                 {
+                    case TypeCode.Boolean: return ConvertInt32((Boolean)obj ? 1 : 0);
                     case TypeCode.Byte: return ConvertInt32((Byte)obj);
                     case TypeCode.SByte: return ConvertInt32((SByte)obj);
                     case TypeCode.Int16: return ConvertInt32((Int16)obj);
@@ -205,7 +208,7 @@ namespace System.Linq.Expressions.Interpreter
                     case TypeCode.UInt64: return ConvertUInt64((UInt64)obj);
                     case TypeCode.Single: return ConvertDouble((Single)obj);
                     case TypeCode.Double: return ConvertDouble((Double)obj);
-                    default: throw Assert.Unreachable;
+                    default: throw ContractUtils.Unreachable;
                 }
             }
 
@@ -226,7 +229,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -248,7 +251,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -270,7 +273,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }
@@ -292,7 +295,7 @@ namespace System.Linq.Expressions.Interpreter
                         case TypeCode.UInt64: return (UInt64)obj;
                         case TypeCode.Single: return (Single)obj;
                         case TypeCode.Double: return (Double)obj;
-                        default: throw Assert.Unreachable;
+                        default: throw ContractUtils.Unreachable;
                     }
                 }
             }

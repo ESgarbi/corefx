@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Net.Security;
@@ -319,6 +320,7 @@ internal static partial class Interop
                 ValidateManual = 0x08,
                 NoDefaultCred = 0x10,
                 ValidateAuto = 0x20,
+                SendAuxRecord   = 0x00200000,
                 UseStrongCrypto = 0x00400000,
             }
         } // SecureCredential
@@ -512,7 +514,7 @@ internal static partial class Interop
         internal unsafe static extern SecurityStatus SspiFreeAuthIdentity(
             [In] IntPtr authData);
 
-        [DllImport(Interop.Libraries.Sspi, ExactSpelling = true, SetLastError = true)]
+        [DllImport(Interop.Libraries.Sspi, ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
         internal unsafe static extern SecurityStatus SspiEncodeStringsAsAuthIdentity(
             [In] string userName,
             [In] string domainName,

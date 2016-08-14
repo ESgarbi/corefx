@@ -11,7 +11,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>System.IO.FileSystem.Tests</AssemblyName>
     <TestCategories>InnerLoop;OuterLoop</TestCategories>
-    <IncludePerformanceTests>true</IncludePerformanceTests>
+    <NugetTargetMoniker>.NETStandard,Version=v1.3</NugetTargetMoniker>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -27,7 +27,7 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\System.IO.FileSystem.csproj">
+    <ProjectReference Include="..\pkg\System.IO.FileSystem.pkgproj">
       <Project>{879c23dc-d828-4dfb-8e92-abbc11b71035}</Project>
       <Name>System.IO.FileSystem</Name>
       <Private>True</Private>
@@ -117,12 +117,11 @@
     <Compile Include="Directory\GetSetTimes.cs" />
     <Compile Include="Directory\Move.cs" />
     <Compile Include="Directory\ReparsePoints_MountVolume.cs" />
-    <Compile Include="Directory\SetCurrentDirectory_dir.cs" />
+    <Compile Include="Directory\SetCurrentDirectory.cs" />
     <Compile Include="Directory\CreateDirectory.cs" />
     <Compile Include="Directory\Delete_MountVolume.cs" />
     <Compile Include="Directory\Delete.cs" />
     <Compile Include="Directory\Exists.cs" />
-    <Compile Include="Directory\GetCurrentDirectory.cs" />
     <Compile Include="Directory\GetDirectories.cs" />
     <Compile Include="Directory\GetDirectoryRoot.cs" />
     <Compile Include="Directory\GetFiles.cs" />
@@ -148,14 +147,19 @@
     <Compile Include="$(CommonTestPath)\System\IO\FileCleanupTestBase.cs">
       <Link>Common\System\IO\FileCleanupTestBase.cs</Link>
     </Compile>
-    <!-- Performance Tests -->
-    <Compile Include="Performance\Perf.Directory.cs" />
-    <Compile Include="Performance\Perf.File.cs" />
-    <Compile Include="Performance\Perf.FileInfo.cs" />
-    <Compile Include="Performance\Perf.FileStream.cs" />
-    <Compile Include="$(CommonTestPath)\System\PerfUtils.cs">
-      <Link>Common\System\PerfUtils.cs</Link>
+    <Compile Include="$(CommonTestPath)\System\IO\TempFile.cs">
+      <Link>Common\System\IO\TempFile.cs</Link>
     </Compile>
+    <Compile Include="$(CommonTestPath)\System\PlatformDetection.cs">
+      <Link>Common\System\PlatformDetection.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonTestPath)\System\Diagnostics\RemoteExecutorTestBase.cs">
+      <Link>Common\System\Diagnostics\RemoteExecutorTestBase.cs</Link>
+    </Compile>
+    <ProjectReference Include="$(CommonTestPath)\System\Diagnostics\RemoteExecutorConsoleApp\RemoteExecutorConsoleApp.csproj">
+      <Project>{69e46a6f-9966-45a5-8945-2559fe337827}</Project>
+      <Name>RemoteExecutorConsoleApp</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Threading;
 using System.Diagnostics;
@@ -73,11 +74,14 @@ namespace System.Net
         // If a derived class ever uses this and overloads Cleanup, this may need to change.
         internal LazyAsyncResult(object myObject, object myState, AsyncCallback myCallBack, object result)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
-
-            if (result == DBNull.Value && globalLogEnabled)
+            if (result == DBNull.Value)
             {
-                GlobalLog.AssertFormat("LazyAsyncResult#{0}::.ctor()|Result can't be set to DBNull - it's a special internal value.", LoggingHash.HashString(this));
+                if (GlobalLog.IsEnabled)
+                {
+                    GlobalLog.AssertFormat("LazyAsyncResult#{0}::.ctor()|Result can't be set to DBNull - it's a special internal value.", LoggingHash.HashString(this));
+                }
+
+                Debug.Fail("LazyAsyncResult#" + LoggingHash.HashString(this) + "::.ctor()|Result can't be set to DBNull - it's a special internal value.");
             }
 
             _asyncObject = myObject;
@@ -88,18 +92,18 @@ namespace System.Net
 
             if (_asyncCallback != null)
             {
-                if (globalLogEnabled)
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Print("LazyAsyncResult#" + LoggingHash.HashString(this) + "::Complete() invoking callback");
                 }
                 _asyncCallback(this);
             }
-            else if (globalLogEnabled)
+            else if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("LazyAsyncResult#" + LoggingHash.HashString(this) + "::Complete() no callback to invoke");
             }
 
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("LazyAsyncResult#" + LoggingHash.HashString(this) + "::.ctor() (pre-completed)");
             }
@@ -327,16 +331,24 @@ namespace System.Net
                 // then the "result" parameter passed to InvokeCallback() will be ignored.
 
                 // It's an error to call after the result has been completed or with DBNull.
-                if (GlobalLog.IsEnabled)
+                if (value == DBNull.Value)
                 {
-                    if (value == DBNull.Value)
+                    if (GlobalLog.IsEnabled)
                     {
                         GlobalLog.AssertFormat("LazyAsyncResult#{0}::set_Result()|Result can't be set to DBNull - it's a special internal value.", LoggingHash.HashString(this));
                     }
-                    if (InternalPeekCompleted)
+
+                    Debug.Fail("LazyAsyncResult#" + LoggingHash.HashString(this) + "::set_Result()|Result can't be set to DBNull - it's a special internal value.");
+                }
+
+                if (InternalPeekCompleted)
+                {
+                    if (GlobalLog.IsEnabled)
                     {
                         GlobalLog.AssertFormat("LazyAsyncResult#{0}::set_Result()|Called on completed result.", LoggingHash.HashString(this));
                     }
+
+                    Debug.Fail("LazyAsyncResult#" + LoggingHash.HashString(this) + "::set_Result()|Called on completed result.");
                 }
                 _result = value;
             }
@@ -383,7 +395,7 @@ namespace System.Net
             // Critical to disallow DBNull here - it could result in a stuck spinlock in WaitForCompletion.
             if (result == DBNull.Value)
             {
-                throw new ArgumentNullException("result");
+                throw new ArgumentNullException(nameof(result));
             }
 
 #if DEBUG
@@ -440,19 +452,17 @@ namespace System.Net
             ThreadContext threadContext = CurrentThreadContext;
             try
             {
-                bool globalLogEnabled = GlobalLog.IsEnabled;
-
                 ++threadContext._nestedIOCount;
                 if (_asyncCallback != null)
                 {
-                    if (globalLogEnabled)
+                    if (GlobalLog.IsEnabled)
                     {
                         GlobalLog.Print("LazyAsyncResult#" + LoggingHash.HashString(this) + "::Complete() invoking callback");
                     }
 
                     if (threadContext._nestedIOCount >= ForceAsyncCount)
                     {
-                        if (globalLogEnabled)
+                        if (GlobalLog.IsEnabled)
                         {
                             GlobalLog.Print("LazyAsyncResult::Complete *** OFFLOADED the user callback ***");
                         }
@@ -471,7 +481,7 @@ namespace System.Net
                         _asyncCallback(this);
                     }
                 }
-                else if (globalLogEnabled)
+                else if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Print("LazyAsyncResult#" + LoggingHash.HashString(this) + "::Complete() no callback to invoke");
                 }

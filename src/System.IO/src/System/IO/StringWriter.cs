@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Text;
 using System.Globalization;
@@ -39,7 +40,7 @@ namespace System.IO
         {
             if (sb == null)
             {
-                throw new ArgumentNullException("sb", SR.ArgumentNull_Buffer);
+                throw new ArgumentNullException(nameof(sb), SR.ArgumentNull_Buffer);
             }
 
             _sb = sb;
@@ -97,15 +98,15 @@ namespace System.IO
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer", SR.ArgumentNull_Buffer);
+                throw new ArgumentNullException(nameof(buffer), SR.ArgumentNull_Buffer);
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(index), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (buffer.Length - index < count)
             {
@@ -135,56 +136,49 @@ namespace System.IO
             }
         }
 
-
         #region Task based Async APIs
-#pragma warning disable 1998 // async method with no await
-        private async Task MakeCompletedTask()
-        {
-            // do nothing.  We're taking advantage of the async infrastructure's optimizations, one of which is to
-            // return a cached already-completed Task when possible.
-        }
-#pragma warning restore 1998
-
+        
         public override Task WriteAsync(char value)
         {
             Write(value);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task WriteAsync(string value)
         {
             Write(value);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task WriteAsync(char[] buffer, int index, int count)
         {
             Write(buffer, index, count);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task WriteLineAsync(char value)
         {
             WriteLine(value);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task WriteLineAsync(string value)
         {
             WriteLine(value);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task WriteLineAsync(char[] buffer, int index, int count)
         {
             WriteLine(buffer, index, count);
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
 
         public override Task FlushAsync()
         {
-            return MakeCompletedTask();
+            return Task.CompletedTask;
         }
+        
         #endregion
 
         // Returns a string containing the characters written to this TextWriter

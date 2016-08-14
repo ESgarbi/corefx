@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -27,7 +28,7 @@ namespace System.IO
         // the specified extension. If path is null, the function
         // returns null. If path does not contain a file extension,
         // the new file extension is appended to the path. If extension
-        // is null, any exsiting extension is removed from path.
+        // is null, any existing extension is removed from path.
         public static string ChangeExtension(string path, string extension)
         {
             if (path != null)
@@ -43,7 +44,7 @@ namespace System.IO
                         s = path.Substring(0, i);
                         break;
                     }
-                    if (IsDirectoryOrVolumeSeparator(ch)) break;
+                    if (PathInternal.IsDirectoryOrVolumeSeparator(ch)) break;
                 }
 
                 if (extension != null && path.Length != 0)
@@ -75,8 +76,6 @@ namespace System.IO
                 int i = path.Length;
                 if (i > root)
                 {
-                    i = path.Length;
-                    if (i == root) return null;
                     while (i > root && !PathInternal.IsDirectorySeparator(path[--i])) ;
                     return path.Substring(0, i);
                 }
@@ -116,7 +115,7 @@ namespace System.IO
                     else
                         return string.Empty;
                 }
-                if (IsDirectoryOrVolumeSeparator(ch))
+                if (PathInternal.IsDirectoryOrVolumeSeparator(ch))
                     break;
             }
             return string.Empty;
@@ -128,19 +127,12 @@ namespace System.IO
         [Pure]
         public static string GetFileName(string path)
         {
-            if (path != null)
-            {
-                PathInternal.CheckInvalidPathChars(path);
-
-                int length = path.Length;
-                for (int i = length - 1; i >= 0; i--)
-                {
-                    char ch = path[i];
-                    if (IsDirectoryOrVolumeSeparator(ch))
-                        return path.Substring(i + 1, length - i - 1);
-                }
-            }
-            return path;
+            if (path == null)
+                return null;
+            
+            int offset = PathInternal.FindFileNameIndex(path);
+            int count = path.Length - offset;
+            return path.Substring(offset, count);
         }
 
         [Pure]
@@ -149,34 +141,28 @@ namespace System.IO
             if (path == null)
                 return null;
 
-            path = GetFileName(path);
-            int i;
-            return (i = path.LastIndexOf('.')) == -1 ?
-                path : // No path extension found
-                path.Substring(0, i);
+            int length = path.Length;
+            int offset = PathInternal.FindFileNameIndex(path);
+            
+            int end = path.LastIndexOf('.', length - 1, length - offset);
+            return end == -1 ?
+                path.Substring(offset) : // No extension was found
+                path.Substring(offset, end - offset);
         }
 
         // Returns a cryptographically strong random 8.3 string that can be 
         // used as either a folder name or a file name.
-        public static string GetRandomFileName()
+        public static unsafe string GetRandomFileName()
         {
-            // 5 bytes == 40 bits == 40/5 == 8 chars in our encoding.
-            // So 10 bytes provides 16 chars, of which we need 11
-            // for the 8.3 name.
-            byte[] key = CreateCryptoRandomByteArray(10);
+            // 8 random bytes provides 12 chars in our encoding for the 8.3 name.
+            const int KeyLength = 8;
+            byte* pKey = stackalloc byte[KeyLength];
+            GetCryptoRandomBytes(pKey, KeyLength);
 
-            // rndCharArray is expected to be 16 chars
-            char[] rndCharArray = ToBase32StringSuitableForDirName(key).ToCharArray();
-            rndCharArray[8] = '.';
-            return new string(rndCharArray, 0, 12);
-        }
-
-        // Returns a unique temporary file name, and creates a 0-byte file by that
-        // name on disk.
-        [System.Security.SecuritySafeCritical]
-        public static string GetTempFileName()
-        {
-            return InternalGetTempFileName(checkHost: true);
+            const int RandomFileNameLength = 12;
+            char* pRandomFileName = stackalloc char[RandomFileNameLength];
+            Populate83FileNameFromRandomBytes(pKey, KeyLength, pRandomFileName, RandomFileNameLength);
+            return new string(pRandomFileName, 0, RandomFileNameLength);
         }
 
         // Tests if a path includes a file extension. The result is
@@ -197,7 +183,7 @@ namespace System.IO
                     {
                         return i != path.Length - 1;
                     }
-                    if (IsDirectoryOrVolumeSeparator(ch)) break;
+                    if (PathInternal.IsDirectoryOrVolumeSeparator(ch)) break;
                 }
             }
             return false;
@@ -232,21 +218,21 @@ namespace System.IO
         {
             if (paths == null)
             {
-                throw new ArgumentNullException("paths");
+                throw new ArgumentNullException(nameof(paths));
             }
             Contract.EndContractBlock();
 
             int finalSize = 0;
             int firstComponent = 0;
 
-            // We have two passes, the first calcuates how large a buffer to allocate and does some precondition
+            // We have two passes, the first calculates how large a buffer to allocate and does some precondition
             // checks on the paths passed in.  The second actually does the combination.
 
             for (int i = 0; i < paths.Length; i++)
             {
                 if (paths[i] == null)
                 {
-                    throw new ArgumentNullException("paths");
+                    throw new ArgumentNullException(nameof(paths));
                 }
 
                 if (paths[i].Length == 0)
@@ -267,7 +253,7 @@ namespace System.IO
                 }
 
                 char ch = paths[i][paths[i].Length - 1];
-                if (!IsDirectoryOrVolumeSeparator(ch))
+                if (!PathInternal.IsDirectoryOrVolumeSeparator(ch))
                     finalSize++;
             }
 
@@ -287,7 +273,7 @@ namespace System.IO
                 else
                 {
                     char ch = finalPath[finalPath.Length - 1];
-                    if (!IsDirectoryOrVolumeSeparator(ch))
+                    if (!PathInternal.IsDirectoryOrVolumeSeparator(ch))
                     {
                         finalPath.Append(DirectorySeparatorChar);
                     }
@@ -311,7 +297,7 @@ namespace System.IO
                 return path2;
 
             char ch = path1[path1.Length - 1];
-            return IsDirectoryOrVolumeSeparator(ch) ?
+            return PathInternal.IsDirectoryOrVolumeSeparator(ch) ?
                 path1 + path2 :
                 path1 + DirectorySeparatorCharAsString + path2;
         }
@@ -330,8 +316,8 @@ namespace System.IO
             if (IsPathRooted(path2))
                 return CombineNoChecks(path2, path3);
 
-            bool hasSep1 = IsDirectoryOrVolumeSeparator(path1[path1.Length - 1]);
-            bool hasSep2 = IsDirectoryOrVolumeSeparator(path2[path2.Length - 1]);
+            bool hasSep1 = PathInternal.IsDirectoryOrVolumeSeparator(path1[path1.Length - 1]);
+            bool hasSep2 = PathInternal.IsDirectoryOrVolumeSeparator(path2[path2.Length - 1]);
 
             if (hasSep1 && hasSep2)
             {
@@ -359,64 +345,62 @@ namespace System.IO
             }
         }
 
-        private static readonly char[] s_Base32Char = {
+        private static readonly char[] s_base32Char = {
                 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
                 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
                 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
                 'y', 'z', '0', '1', '2', '3', '4', '5'};
 
-        private static string ToBase32StringSuitableForDirName(byte[] buff)
+        private static unsafe void Populate83FileNameFromRandomBytes(byte* bytes, int byteCount, char* chars, int charCount)
         {
-            // This routine is optimised to be used with buffs of length 20
-            Debug.Assert(((buff.Length % 5) == 0), "Unexpected hash length");
+            Debug.Assert(bytes != null);
+            Debug.Assert(chars != null);
 
-            // For every 5 bytes, 8 characters are appended.
-            StringBuilder sb = StringBuilderCache.Acquire();
+            // This method requires bytes of length 8 and chars of length 12.
+            Debug.Assert(byteCount == 8, $"Unexpected {nameof(byteCount)}");
+            Debug.Assert(charCount == 12, $"Unexpected {nameof(charCount)}");
 
-            // Create l char for each of the last 5 bits of each byte.  
-            // Consume 3 MSB bits 5 bytes at a time.
-            int len = buff.Length;
-            int i = 0;
-            do
-            {
-                byte b0 = (i < len) ? buff[i++] : (byte)0;
-                byte b1 = (i < len) ? buff[i++] : (byte)0;
-                byte b2 = (i < len) ? buff[i++] : (byte)0;
-                byte b3 = (i < len) ? buff[i++] : (byte)0;
-                byte b4 = (i < len) ? buff[i++] : (byte)0;
+            byte b0 = bytes[0];
+            byte b1 = bytes[1];
+            byte b2 = bytes[2];
+            byte b3 = bytes[3];
+            byte b4 = bytes[4];
 
-                // Consume the 5 Least significant bits of each byte
-                sb.Append(s_Base32Char[b0 & 0x1F]);
-                sb.Append(s_Base32Char[b1 & 0x1F]);
-                sb.Append(s_Base32Char[b2 & 0x1F]);
-                sb.Append(s_Base32Char[b3 & 0x1F]);
-                sb.Append(s_Base32Char[b4 & 0x1F]);
+            // Consume the 5 Least significant bits of the first 5 bytes
+            chars[0] = s_base32Char[b0 & 0x1F];
+            chars[1] = s_base32Char[b1 & 0x1F];
+            chars[2] = s_base32Char[b2 & 0x1F];
+            chars[3] = s_base32Char[b3 & 0x1F];
+            chars[4] = s_base32Char[b4 & 0x1F];
 
-                // Consume 3 MSB of b0, b1, MSB bits 6, 7 of b3, b4
-                sb.Append(s_Base32Char[(
-                        ((b0 & 0xE0) >> 5) |
-                        ((b3 & 0x60) >> 2))]);
+            // Consume 3 MSB of b0, b1, MSB bits 6, 7 of b3, b4
+            chars[5] = s_base32Char[(
+                    ((b0 & 0xE0) >> 5) |
+                    ((b3 & 0x60) >> 2))];
 
-                sb.Append(s_Base32Char[(
-                        ((b1 & 0xE0) >> 5) |
-                        ((b4 & 0x60) >> 2))]);
+            chars[6] = s_base32Char[(
+                    ((b1 & 0xE0) >> 5) |
+                    ((b4 & 0x60) >> 2))];
 
-                // Consume 3 MSB bits of b2, 1 MSB bit of b3, b4
+            // Consume 3 MSB bits of b2, 1 MSB bit of b3, b4
+            b2 >>= 5;
 
-                b2 >>= 5;
+            Debug.Assert(((b2 & 0xF8) == 0), "Unexpected set bits");
 
-                Debug.Assert(((b2 & 0xF8) == 0), "Unexpected set bits");
+            if ((b3 & 0x80) != 0)
+                b2 |= 0x08;
+            if ((b4 & 0x80) != 0)
+                b2 |= 0x10;
 
-                if ((b3 & 0x80) != 0)
-                    b2 |= 0x08;
-                if ((b4 & 0x80) != 0)
-                    b2 |= 0x10;
+            chars[7] = s_base32Char[b2];
 
-                sb.Append(s_Base32Char[b2]);
+            // Set the file extension separator
+            chars[8] = '.';
 
-            } while (i < len);
-
-            return StringBuilderCache.GetStringAndRelease(sb);
+            // Consume the 5 Least significant bits of the remaining 3 bytes
+            chars[9] = s_base32Char[(bytes[5] & 0x1F)];
+            chars[10] = s_base32Char[(bytes[6] & 0x1F)];
+            chars[11] = s_base32Char[(bytes[7] & 0x1F)];
         }
     }
 }

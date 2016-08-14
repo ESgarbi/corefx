@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*=============================================================================
 **
@@ -8,7 +9,7 @@
 **
 **
 =============================================================================*/
-using System;
+
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
@@ -23,11 +24,11 @@ namespace System.Collections.Generic
         IReadOnlyCollection<T>
     {
         private T[] _array;
-        private int _head;       // First valid element in the queue
-        private int _tail;       // Last valid element in the queue
+        private int _head;       // The index from which to dequeue if the queue isn't empty.
+        private int _tail;       // The index at which to enqueue if the queue isn't full.
         private int _size;       // Number of elements.
         private int _version;
-        private Object _syncRoot;
+        private object _syncRoot;
 
         private const int MinimumGrow = 4;
         private const int GrowFactor = 200;  // double each time
@@ -47,7 +48,7 @@ namespace System.Collections.Generic
         public Queue(int capacity)
         {
             if (capacity < 0)
-                throw new ArgumentOutOfRangeException("capacity", SR.ArgumentOutOfRange_NeedNonNegNumRequired);
+                throw new ArgumentOutOfRangeException(nameof(capacity), capacity, SR.ArgumentOutOfRange_NeedNonNegNum);
             _array = new T[capacity];
         }
 
@@ -58,12 +59,11 @@ namespace System.Collections.Generic
         public Queue(IEnumerable<T> collection)
         {
             if (collection == null)
-                throw new ArgumentNullException("collection");
+                throw new ArgumentNullException(nameof(collection));
 
             _array = EnumerableHelpers.ToArray(collection, out _size);
-            _tail = (_size == _array.Length) ? 0 : _size;
+            if (_size != _array.Length) _tail = _size;
         }
-
 
         /// <include file='doc\Queue.uex' path='docs/doc[@for="Queue.Count"]/*' />
         public int Count
@@ -72,18 +72,18 @@ namespace System.Collections.Generic
         }
 
         /// <include file='doc\Queue.uex' path='docs/doc[@for="Queue.IsSynchronized"]/*' />
-        bool System.Collections.ICollection.IsSynchronized
+        bool ICollection.IsSynchronized
         {
             get { return false; }
         }
 
-        Object System.Collections.ICollection.SyncRoot
+        object ICollection.SyncRoot
         {
             get
             {
                 if (_syncRoot == null)
                 {
-                    System.Threading.Interlocked.CompareExchange<Object>(ref _syncRoot, new Object(), null);
+                    Threading.Interlocked.CompareExchange<object>(ref _syncRoot, new object(), null);
                 }
                 return _syncRoot;
             }
@@ -119,12 +119,12 @@ namespace System.Collections.Generic
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
 
             if (arrayIndex < 0 || arrayIndex > array.Length)
             {
-                throw new ArgumentOutOfRangeException("arrayIndex", SR.ArgumentOutOfRange_Index);
+                throw new ArgumentOutOfRangeException(nameof(arrayIndex), arrayIndex, SR.ArgumentOutOfRange_Index);
             }
 
             int arrayLen = array.Length;
@@ -133,10 +133,10 @@ namespace System.Collections.Generic
                 throw new ArgumentException(SR.Argument_InvalidOffLen);
             }
 
-            int numToCopy = (arrayLen - arrayIndex < _size) ? (arrayLen - arrayIndex) : _size;
+            int numToCopy = _size;
             if (numToCopy == 0) return;
 
-            int firstPart = (_array.Length - _head < numToCopy) ? _array.Length - _head : numToCopy;
+            int firstPart = Math.Min(_array.Length - _head, numToCopy);
             Array.Copy(_array, _head, array, arrayIndex, firstPart);
             numToCopy -= firstPart;
             if (numToCopy > 0)
@@ -145,27 +145,27 @@ namespace System.Collections.Generic
             }
         }
 
-        void System.Collections.ICollection.CopyTo(Array array, int index)
+        void ICollection.CopyTo(Array array, int index)
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
 
             if (array.Rank != 1)
             {
-                throw new ArgumentException(SR.Arg_RankMultiDimNotSupported);
+                throw new ArgumentException(SR.Arg_RankMultiDimNotSupported, nameof(array));
             }
 
             if (array.GetLowerBound(0) != 0)
             {
-                throw new ArgumentException(SR.Arg_NonZeroLowerBound);
+                throw new ArgumentException(SR.Arg_NonZeroLowerBound, nameof(array));
             }
 
             int arrayLen = array.Length;
             if (index < 0 || index > arrayLen)
             {
-                throw new ArgumentOutOfRangeException("index", SR.ArgumentOutOfRange_Index);
+                throw new ArgumentOutOfRangeException(nameof(index), index, SR.ArgumentOutOfRange_Index);
             }
 
             if (arrayLen - index < _size)
@@ -173,7 +173,7 @@ namespace System.Collections.Generic
                 throw new ArgumentException(SR.Argument_InvalidOffLen);
             }
 
-            int numToCopy = (arrayLen - index < _size) ? arrayLen - index : _size;
+            int numToCopy = _size;
             if (numToCopy == 0) return;
 
             try
@@ -189,7 +189,7 @@ namespace System.Collections.Generic
             }
             catch (ArrayTypeMismatchException)
             {
-                throw new ArgumentException(SR.Argument_InvalidArrayType);
+                throw new ArgumentException(SR.Argument_InvalidArrayType, nameof(array));
             }
         }
 
@@ -230,7 +230,7 @@ namespace System.Collections.Generic
             return new Enumerator(this);
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        IEnumerator IEnumerable.GetEnumerator()
         {
             return new Enumerator(this);
         }
@@ -266,7 +266,6 @@ namespace System.Collections.Generic
         // Returns true if the queue contains at least one object equal to item.
         // Equality is determined using item.Equals().
         //
-        // Exceptions: ArgumentNullException if item == null.
         /// <include file='doc\Queue.uex' path='docs/doc[@for="Queue.Contains"]/*' />
         public bool Contains(T item)
         {
@@ -276,12 +275,7 @@ namespace System.Collections.Generic
             EqualityComparer<T> c = EqualityComparer<T>.Default;
             while (count-- > 0)
             {
-                if (((Object)item) == null)
-                {
-                    if (((Object)_array[index]) == null)
-                        return true;
-                }
-                else if (_array[index] != null && c.Equals(_array[index], item))
+                if (c.Equals(_array[index], item))
                 {
                     return true;
                 }
@@ -303,10 +297,13 @@ namespace System.Collections.Generic
         /// <include file='doc\Queue.uex' path='docs/doc[@for="Queue.ToArray"]/*' />
         public T[] ToArray()
         {
-            T[] arr = new T[_size];
             if (_size == 0)
-                return arr; // consider replacing with Array.Empty<T>() to be consistent with non-generic Queue
-            
+            {
+                return Array.Empty<T>();
+            }
+
+            T[] arr = new T[_size];
+
             if (_head < _tail)
             {
                 Array.Copy(_array, _head, arr, 0, _size);
@@ -370,15 +367,15 @@ namespace System.Collections.Generic
         public struct Enumerator : IEnumerator<T>,
             System.Collections.IEnumerator
         {
-            private Queue<T> _q;
+            private readonly Queue<T> _q;
+            private readonly int _version;
             private int _index;   // -1 = not started, -2 = ended/disposed
-            private int _version;
             private T _currentElement;
 
             internal Enumerator(Queue<T> q)
             {
                 _q = q;
-                _version = _q._version;
+                _version = q._version;
                 _index = -1;
                 _currentElement = default(T);
             }
@@ -417,22 +414,23 @@ namespace System.Collections.Generic
                 get
                 {
                     if (_index < 0)
-                    {
-                        if (_index == -1)
-                            throw new InvalidOperationException(SR.InvalidOperation_EnumNotStarted);
-                        else
-                            throw new InvalidOperationException(SR.InvalidOperation_EnumEnded);
-                    }
+                        ThrowEnumerationNotStartedOrEnded();
                     return _currentElement;
                 }
             }
 
-            Object System.Collections.IEnumerator.Current
+            private void ThrowEnumerationNotStartedOrEnded()
+            {
+                Debug.Assert(_index == -1 || _index == -2);
+                throw new InvalidOperationException(_index == -1 ? SR.InvalidOperation_EnumNotStarted : SR.InvalidOperation_EnumEnded);
+            }
+
+            object IEnumerator.Current
             {
                 get { return Current; }
             }
 
-            void System.Collections.IEnumerator.Reset()
+            void IEnumerator.Reset()
             {
                 if (_version != _q._version) throw new InvalidOperationException(SR.InvalidOperation_EnumFailedVersion);
                 _index = -1;

@@ -1,10 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-
-// 
-
-using System;
 using System.Collections.Generic;
 
 namespace System.Collections
@@ -45,7 +42,7 @@ namespace System.Collections
 
     internal sealed class StructuralEqualityComparer : IEqualityComparer
     {
-        public new bool Equals(Object x, Object y)
+        public new bool Equals(object x, object y)
         {
             if (x != null)
             {
@@ -69,7 +66,7 @@ namespace System.Collections
             return true;
         }
 
-        public int GetHashCode(Object obj)
+        public int GetHashCode(object obj)
         {
             if (obj == null) return 0;
 
@@ -86,7 +83,7 @@ namespace System.Collections
 
     internal sealed class StructuralComparer : IComparer
     {
-        public int Compare(Object x, Object y)
+        public int Compare(object x, object y)
         {
             if (x == null) return y == null ? 0 : -1;
             if (y == null) return 1;
@@ -98,7 +95,7 @@ namespace System.Collections
                 return scX.CompareTo(y, this);
             }
 
-            return Comparer<Object>.Default.Compare(x, y);
+            return Comparer<object>.Default.Compare(x, y);
         }
     }
 }

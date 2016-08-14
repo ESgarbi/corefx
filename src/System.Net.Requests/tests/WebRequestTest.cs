@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -54,5 +55,26 @@ namespace System.Net.Tests
                 proxy.Credentials = oldCreds;
             }
         }
+
+        [Theory]
+        [InlineData("http")]
+        [InlineData("https")]
+        public void Create_ValidWebRequestUriScheme_Success(string scheme)
+        {
+            var uri = new Uri($"{scheme}://example.com/folder/resource.txt");
+            WebRequest request = WebRequest.Create(uri);
+        }
+
+        [Theory]
+        [InlineData("ws")]
+        [InlineData("wss")]
+        [InlineData("file")]
+        [InlineData("ftp")]
+        [InlineData("custom")]
+        public void Create_InvalidWebRequestUriScheme_Throws(string scheme)
+        {
+            var uri = new Uri($"{scheme}://example.com/folder/resource.txt");
+            Assert.Throws<NotSupportedException>(() => WebRequest.Create(uri));
+        }        
     }
 }

@@ -1,7 +1,10 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System.Net.Sockets;
 using System.Net.Test.Common;
+using System.Threading.Tasks;
 
 using Xunit;
 using Xunit.Abstractions;
@@ -55,8 +58,12 @@ namespace System.Net.NetworkInformation.Tests
             {
                 _log.WriteLine("- NetworkInterface -");
                 _log.WriteLine("Name: " + nic.Name);
-                Assert.Throws<PlatformNotSupportedException>(() => nic.Description);
-                Assert.Throws<PlatformNotSupportedException>(() => nic.Id);
+                string description = nic.Description;
+                Assert.False(string.IsNullOrEmpty(description), "NetworkInterface.Description should not be null or empty.");
+                _log.WriteLine("Description: " + description);
+                string id = nic.Id;
+                Assert.False(string.IsNullOrEmpty(id), "NetworkInterface.Id should not be null or empty.");
+                _log.WriteLine("ID: " + id);
                 Assert.Throws<PlatformNotSupportedException>(() => nic.IsReceiveOnly);
                 _log.WriteLine("Type: " + nic.NetworkInterfaceType);
                 _log.WriteLine("Status: " + nic.OperationalStatus);
@@ -85,8 +92,12 @@ namespace System.Net.NetworkInformation.Tests
             {
                 _log.WriteLine("- NetworkInterface -");
                 _log.WriteLine("Name: " + nic.Name);
-                Assert.Throws<PlatformNotSupportedException>(() => nic.Description);
-                _log.WriteLine("ID: " + nic.Id);
+                string description = nic.Description;
+                Assert.False(string.IsNullOrEmpty(description), "NetworkInterface.Description should not be null or empty.");
+                _log.WriteLine("Description: " + description);
+                string id = nic.Id;
+                Assert.False(string.IsNullOrEmpty(id), "NetworkInterface.Id should not be null or empty.");
+                _log.WriteLine("ID: " + id);
                 Assert.Throws<PlatformNotSupportedException>(() => nic.IsReceiveOnly);
                 _log.WriteLine("Type: " + nic.NetworkInterfaceType);
                 _log.WriteLine("Status: " + nic.OperationalStatus);
@@ -239,6 +250,32 @@ namespace System.Net.NetworkInformation.Tests
         public void BasicTest_GetIsNetworkAvailable_Success()
         {
             Assert.True(NetworkInterface.GetIsNetworkAvailable());
+        }
+
+        [Theory]
+        [PlatformSpecific(~PlatformID.OSX)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task NetworkInterface_LoopbackInterfaceIndex_MatchesReceivedPackets(bool ipv6)
+        {
+            using (var client = new Socket(SocketType.Dgram, ProtocolType.Udp))
+            using (var server = new Socket(SocketType.Dgram, ProtocolType.Udp))
+            {
+                server.Bind(new IPEndPoint(ipv6 ? IPAddress.IPv6Loopback : IPAddress.Loopback, 0));
+                var serverEndPoint = (IPEndPoint)server.LocalEndPoint;
+
+                Task<SocketReceiveMessageFromResult> receivedTask = 
+                    server.ReceiveMessageFromAsync(new ArraySegment<byte>(new byte[1]), SocketFlags.None, serverEndPoint);
+                while (!receivedTask.IsCompleted)
+                {
+                    client.SendTo(new byte[] { 42 }, serverEndPoint);
+                    await Task.Delay(1);
+                }
+
+                Assert.Equal(
+                    (await receivedTask).PacketInformation.Interface,
+                    ipv6 ? NetworkInterface.IPv6LoopbackInterfaceIndex : NetworkInterface.LoopbackInterfaceIndex);
+            }
         }
     }
 }

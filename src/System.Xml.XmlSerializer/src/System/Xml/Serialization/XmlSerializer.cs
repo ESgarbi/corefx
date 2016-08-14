@@ -1,8 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 namespace System.Xml.Serialization
@@ -84,7 +82,7 @@ namespace System.Xml.Serialization
             }
         }
 
-        private static InternalHashtable s_xmlSerializerTable = new InternalHashtable();
+        private static readonly Dictionary<Type, Dictionary<XmlSerializerMappingKey, XmlSerializer>> s_xmlSerializerTable = new Dictionary<Type, Dictionary<XmlSerializerMappingKey, XmlSerializer>>();
 
         /// <include file='doc\XmlSerializer.uex' path='docs/doc[@for="XmlSerializer.XmlSerializer8"]/*' />
         ///<internalonly/>
@@ -154,7 +152,7 @@ namespace System.Xml.Serialization
         public XmlSerializer(Type type, string defaultNamespace)
         {
             if (type == null)
-                throw new ArgumentNullException("type");
+                throw new ArgumentNullException(nameof(type));
 
 #if NET_NATIVE
             this.DefaultNamespace = defaultNamespace;
@@ -209,7 +207,7 @@ namespace System.Xml.Serialization
             throw new PlatformNotSupportedException();
 #else
             if (type == null)
-                throw new ArgumentNullException("type");
+                throw new ArgumentNullException(nameof(type));
 
             XmlReflectionImporter importer = new XmlReflectionImporter(overrides, defaultNamespace);
             if (extraTypes != null)
@@ -231,7 +229,7 @@ namespace System.Xml.Serialization
         internal static TempAssembly GenerateTempAssembly(XmlMapping xmlMapping, Type type, string defaultNamespace)
         {
             if (xmlMapping == null)
-                throw new ArgumentNullException("xmlMapping");
+                throw new ArgumentNullException(nameof(xmlMapping));
             return new TempAssembly(new XmlMapping[] { xmlMapping }, new Type[] { type }, defaultNamespace, null, null);
         }
 
@@ -505,6 +503,7 @@ namespace System.Xml.Serialization
                 TypeDesc typeDesc = (TypeDesc)TypeScope.PrimtiveTypes[_primitiveType];
                 return xmlReader.IsStartElement(typeDesc.DataType.Name, string.Empty);
             }
+#if !NET_NATIVE
             else if (_tempAssembly != null)
             {
                 return _tempAssembly.CanRead(_mapping, xmlReader);
@@ -513,6 +512,14 @@ namespace System.Xml.Serialization
             {
                 return false;
             }
+#else
+            if (this.innerSerializer == null)
+            {
+                return false;
+            }
+
+            return this.innerSerializer.CanDeserialize(xmlReader);
+#endif
         }
 
         /// <include file='doc\XmlSerializer.uex' path='docs/doc[@for="XmlSerializer.FromMappings"]/*' />
@@ -568,25 +575,23 @@ namespace System.Xml.Serialization
         {
             XmlSerializer[] serializers = new XmlSerializer[mappings.Length];
 
-            InternalHashtable typedMappingTable = null;
+            Dictionary<XmlSerializerMappingKey, XmlSerializer> typedMappingTable = null;
             lock (s_xmlSerializerTable)
             {
-                typedMappingTable = s_xmlSerializerTable[type] as InternalHashtable;
-                if (typedMappingTable == null)
+                if (!s_xmlSerializerTable.TryGetValue(type, out typedMappingTable))
                 {
-                    typedMappingTable = new InternalHashtable();
+                    typedMappingTable = new Dictionary<XmlSerializerMappingKey, XmlSerializer>();
                     s_xmlSerializerTable[type] = typedMappingTable;
                 }
             }
 
             lock (typedMappingTable)
             {
-                InternalHashtable pendingKeys = new InternalHashtable();
+                var pendingKeys = new Dictionary<XmlSerializerMappingKey, int>();
                 for (int i = 0; i < mappings.Length; i++)
                 {
                     XmlSerializerMappingKey mappingKey = new XmlSerializerMappingKey(mappings[i]);
-                    serializers[i] = typedMappingTable[mappingKey] as XmlSerializer;
-                    if (serializers[i] == null)
+                    if (!typedMappingTable.TryGetValue(mappingKey, out serializers[i]))
                     {
                         pendingKeys.Add(mappingKey, i);
                     }
@@ -606,7 +611,7 @@ namespace System.Xml.Serialization
 
                     foreach (XmlSerializerMappingKey mappingKey in pendingKeys.Keys)
                     {
-                        index = (int)pendingKeys[mappingKey];
+                        index = pendingKeys[mappingKey];
                         serializers[index] = (XmlSerializer)contract.TypedSerializers[mappingKey.Mapping.Key];
                         serializers[index].SetTempAssembly(tempAssembly, mappingKey.Mapping);
 
@@ -628,6 +633,16 @@ namespace System.Xml.Serialization
         {
             if (types == null)
                 return Array.Empty<XmlSerializer>();
+
+#if NET_NATIVE
+            var serializers = new XmlSerializer[types.Length];
+            for (int i = 0; i < types.Length; i++)
+            {
+                serializers[i] = new XmlSerializer(types[i]);
+            }
+
+            return serializers;
+#else
             XmlReflectionImporter importer = new XmlReflectionImporter();
             XmlTypeMapping[] mappings = new XmlTypeMapping[types.Length];
             for (int i = 0; i < types.Length; i++)
@@ -635,6 +650,7 @@ namespace System.Xml.Serialization
                 mappings[i] = importer.ImportTypeMapping(types[i]);
             }
             return FromMappings(mappings);
+#endif
         }
 
 #if NET_NATIVE
@@ -685,8 +701,8 @@ namespace System.Xml.Serialization
         {
             if (ns != null && ns != string.Empty)
                 return null;
-            TypeDesc typeDesc = (TypeDesc)TypeScope.PrimtiveTypes[type];
-            if (typeDesc == null)
+            TypeDesc typeDesc;
+            if (!TypeScope.PrimtiveTypes.TryGetValue(type, out typeDesc))
                 return null;
             ElementAccessor element = new ElementAccessor();
             element.Name = typeDesc.DataType.Name;

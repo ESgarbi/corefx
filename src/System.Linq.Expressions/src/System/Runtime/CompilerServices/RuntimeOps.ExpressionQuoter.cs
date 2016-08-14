@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -46,7 +47,7 @@ namespace System.Runtime.CompilerServices
         // burned as a constant, and all hoisted variables/parameters are rewritten
         // as indexing expressions.
         //
-        // The behavior of Quote is indended to be like C# and VB expression quoting
+        // The behavior of Quote is intended to be like C# and VB expression quoting
         private sealed class ExpressionQuoter : ExpressionVisitor
         {
             private readonly HoistedLocals _scope;
@@ -55,7 +56,7 @@ namespace System.Runtime.CompilerServices
             // A stack of variables that are defined in nested scopes. We search
             // this first when resolving a variable in case a nested scope shadows
             // one of our variable instances.
-            private readonly Stack<Set<ParameterExpression>> _shadowedVars = new Stack<Set<ParameterExpression>>();
+            private readonly Stack<HashSet<ParameterExpression>> _shadowedVars = new Stack<HashSet<ParameterExpression>>();
 
             internal ExpressionQuoter(HoistedLocals scope, object[] locals)
             {
@@ -65,7 +66,7 @@ namespace System.Runtime.CompilerServices
 
             protected internal override Expression VisitLambda<T>(Expression<T> node)
             {
-                _shadowedVars.Push(new Set<ParameterExpression>(node.Parameters));
+                _shadowedVars.Push(new HashSet<ParameterExpression>(node.Parameters));
                 Expression b = Visit(node.Body);
                 _shadowedVars.Pop();
                 if (b == node.Body)
@@ -79,7 +80,7 @@ namespace System.Runtime.CompilerServices
             {
                 if (node.Variables.Count > 0)
                 {
-                    _shadowedVars.Push(new Set<ParameterExpression>(node.Variables));
+                    _shadowedVars.Push(new HashSet<ParameterExpression>(node.Variables));
                 }
                 var b = Visit(node.Expressions);
                 if (node.Variables.Count > 0)
@@ -97,7 +98,7 @@ namespace System.Runtime.CompilerServices
             {
                 if (node.Variable != null)
                 {
-                    _shadowedVars.Push(new Set<ParameterExpression>(new[] { node.Variable }));
+                    _shadowedVars.Push(new HashSet<ParameterExpression>{ node.Variable });
                 }
                 Expression b = Visit(node.Body);
                 Expression f = Visit(node.Filter);
@@ -168,7 +169,7 @@ namespace System.Runtime.CompilerServices
             private IStrongBox GetBox(ParameterExpression variable)
             {
                 // Skip variables that are shadowed by a nested scope/lambda
-                foreach (Set<ParameterExpression> hidden in _shadowedVars)
+                foreach (HashSet<ParameterExpression> hidden in _shadowedVars)
                 {
                     if (hidden.Contains(variable))
                     {
@@ -227,7 +228,7 @@ namespace System.Runtime.CompilerServices
         }
 
         /// <summary>
-        /// Provides a list of variables, supporing read/write of the values
+        /// Provides a list of variables, supporting read/write of the values
         /// Exposed via RuntimeVariablesExpression
         /// </summary>
         private sealed class MergedRuntimeVariables : IRuntimeVariables

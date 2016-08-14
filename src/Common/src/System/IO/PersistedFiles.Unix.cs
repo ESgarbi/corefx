@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -8,25 +9,7 @@ namespace System.IO
 {
     internal static partial class PersistedFiles
     {
-        private static string s_tempProductDirectory;
         private static string s_userProductDirectory;
-
-        /// <summary>
-        /// Get the location of where to store temporary files for a particular aspect of the framework,
-        /// such as "maps".
-        /// </summary>
-        /// <param name="featureName">The directory name for the feature</param>
-        /// <returns>A path within the temp directory for storing temporary files related to the feature.</returns>
-        internal static string GetTempFeatureDirectory(string featureName)
-        {
-            string path = s_tempProductDirectory;
-            if (path == null)
-            {
-                s_tempProductDirectory = path = Path.Combine(Path.GetTempPath(), TopLevelHiddenDirectory, SecondLevelDirectory);
-            }
-
-            return Path.Combine(path, featureName);
-        }
 
         /// <summary>
         /// Get the location of where to persist information for a particular aspect of the framework,
@@ -105,7 +88,7 @@ namespace System.IO
             if (!string.IsNullOrEmpty(userHomeDirectory))
                 return userHomeDirectory;
 
-            // In initialization conditions, however, the "HOME" enviroment variable may 
+            // In initialization conditions, however, the "HOME" environment variable may 
             // not yet be set. For such cases, consult with the password entry.
             unsafe
             {

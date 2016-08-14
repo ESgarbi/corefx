@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Dynamic.Utils
 {
@@ -27,16 +28,16 @@ namespace System.Dynamic.Utils
         /// <summary>
         /// ArgumentException with message like "Type {0} contains generic parameters"
         /// </summary>
-        internal static Exception TypeContainsGenericParameters(object p0)
+        internal static Exception TypeContainsGenericParameters(object p0, string paramName)
         {
-            return new ArgumentException(Strings.TypeContainsGenericParameters(p0));
+            return new ArgumentException(Strings.TypeContainsGenericParameters(p0), paramName);
         }
         /// <summary>
         /// ArgumentException with message like "Type {0} is a generic type definition"
         /// </summary>
-        internal static Exception TypeIsGeneric(object p0)
+        internal static Exception TypeIsGeneric(object p0, string paramName)
         {
-            return new ArgumentException(Strings.TypeIsGeneric(p0));
+            return new ArgumentException(Strings.TypeIsGeneric(p0), paramName);
         }
 
         /// <summary>

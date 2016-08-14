@@ -1,10 +1,11 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,37 +21,56 @@ namespace System.IO.Pipes
         // Windows, but can't assume a valid handle on Unix.
         internal const bool CheckOperationsRequiresSetHandle = false;
 
+        /// <summary>Characters that can't be used in a pipe's name.</summary>
+        private readonly static char[] s_invalidFileNameChars = Path.GetInvalidFileNameChars();
+
+        /// <summary>Prefix to prepend to all pipe names.</summary>
+        private readonly static string s_pipePrefix = Path.Combine(Path.GetTempPath(), "CoreFxPipe_");
+
         internal static string GetPipePath(string serverName, string pipeName)
         {
             if (serverName != "." && serverName != Interop.Sys.GetHostName())
             {
                 // Cross-machine pipes are not supported.
-                throw new PlatformNotSupportedException();
+                throw new PlatformNotSupportedException(SR.PlatformNotSupported_RemotePipes);
             }
 
-            if (pipeName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            if (string.Equals(pipeName, AnonymousPipeName, StringComparison.OrdinalIgnoreCase))
+            {
+                // Match Windows constraint
+                throw new ArgumentOutOfRangeException(nameof(pipeName), SR.ArgumentOutOfRange_AnonymousReserved);
+            }
+
+            if (pipeName.IndexOfAny(s_invalidFileNameChars) >= 0)
             {
                 // Since pipes are stored as files in the file system, we don't support
                 // pipe names that are actually paths or that otherwise have invalid
                 // filename characters in them.
-                throw new PlatformNotSupportedException();
+                throw new PlatformNotSupportedException(SR.PlatformNotSupproted_InvalidNameChars);
             }
 
-            // Return the pipe path
-            return Path.Combine(EnsurePipeDirectoryPath(), pipeName);
+            // Return the pipe path.  The pipe is created directly under %TMPDIR%.  We don't bother
+            // putting it into subdirectories, as the pipe will only exist on disk for the
+            // duration between when the server starts listening and the client connects, after
+            // which the pipe will be deleted.
+            return s_pipePrefix + pipeName;
         }
 
         /// <summary>Throws an exception if the supplied handle does not represent a valid pipe.</summary>
         /// <param name="safePipeHandle">The handle to validate.</param>
         internal void ValidateHandleIsPipe(SafePipeHandle safePipeHandle)
         {
-            Interop.Sys.FileStatus status;
-            int result = CheckPipeCall(Interop.Sys.FStat(safePipeHandle, out status));
-            if (result == 0)
+            if (safePipeHandle.NamedPipeSocket == null)
             {
-                if ((status.Mode & Interop.Sys.FileTypes.S_IFMT) != Interop.Sys.FileTypes.S_IFIFO)
+                Interop.Sys.FileStatus status;
+                int result = CheckPipeCall(Interop.Sys.FStat(safePipeHandle, out status));
+                if (result == 0)
                 {
-                    throw new IOException(SR.IO_InvalidPipeHandle);
+                    if ((status.Mode & Interop.Sys.FileTypes.S_IFMT) != Interop.Sys.FileTypes.S_IFIFO &&
+                        (status.Mode & Interop.Sys.FileTypes.S_IFMT) != Interop.Sys.FileTypes.S_IFSOCK)
+                    {
+                        throw new IOException(SR.IO_InvalidPipeHandle);
+                    }
                 }
             }
         }
@@ -68,47 +88,150 @@ namespace System.IO.Pipes
             // nop
         }
 
-        private int ReadCore(byte[] buffer, int offset, int count)
+        private unsafe int ReadCore(byte[] buffer, int offset, int count)
         {
-            return ReadCoreNoCancellation(buffer, offset, count);
+            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
+
+            // For named pipes, receive on the socket.
+            Socket socket = _handle.NamedPipeSocket;
+            if (socket != null)
+            {
+                // For a blocking socket, we could simply use the same Read syscall as is done
+                // for reading an anonymous pipe.  However, for a non-blocking socket, Read could
+                // end up returning EWOULDBLOCK rather than blocking waiting for data.  Such a case
+                // is already handled by Socket.Receive, so we use it here.
+                try
+                {
+                    return socket.Receive(buffer, offset, count, SocketFlags.None);
+                }
+                catch (SocketException e)
+                {
+                    throw GetIOExceptionForSocketException(e);
+                }
+            }
+
+            // For anonymous pipes, read from the file descriptor.
+            fixed (byte* bufPtr = buffer)
+            {
+                int result = CheckPipeCall(Interop.Sys.Read(_handle, bufPtr + offset, count));
+                Debug.Assert(result <= count);
+
+                return result;
+            }
         }
 
-        private void WriteCore(byte[] buffer, int offset, int count)
+        private unsafe void WriteCore(byte[] buffer, int offset, int count)
         {
-            WriteCoreNoCancellation(buffer, offset, count);
+            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
+
+            // For named pipes, send to the socket.
+            Socket socket = _handle.NamedPipeSocket;
+            if (socket != null)
+            {
+                // For a blocking socket, we could simply use the same Write syscall as is done
+                // for writing to anonymous pipe.  However, for a non-blocking socket, Write could
+                // end up returning EWOULDBLOCK rather than blocking waiting for space available.  
+                // Such a case is already handled by Socket.Send, so we use it here.
+                try
+                {
+                    while (count > 0)
+                    {
+                        int bytesWritten = socket.Send(buffer, offset, count, SocketFlags.None);
+                        Debug.Assert(bytesWritten <= count);
+
+                        count -= bytesWritten;
+                        offset += bytesWritten;
+                    }
+                }
+                catch (SocketException e)
+                {
+                    throw GetIOExceptionForSocketException(e);
+                }
+            }
+
+            // For anonymous pipes, write the file descriptor.
+            fixed (byte* bufPtr = buffer)
+            {
+                while (count > 0)
+                {
+                    int bytesWritten = CheckPipeCall(Interop.Sys.Write(_handle, bufPtr + offset, count));
+                    Debug.Assert(bytesWritten <= count);
+
+                    count -= bytesWritten;
+                    offset += bytesWritten;
+                }
+            }
         }
 
         private async Task<int> ReadAsyncCore(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            SemaphoreSlim activeAsync = EnsureAsyncActiveSemaphoreInitialized();
-            await activeAsync.WaitAsync(cancellationToken).ForceAsync();
+            Debug.Assert(this is NamedPipeClientStream || this is NamedPipeServerStream, $"Expected a named pipe, got a {GetType()}");
+
+            Socket socket = InternalHandle.NamedPipeSocket;
+
+            // If a cancelable token is used, we have a choice: we can either ignore it and use a true async operation
+            // with Socket.ReceiveAsync, or we can use a polling loop on a worker thread to block for short intervals
+            // and check for cancellation in between.  We do the latter.
+            if (cancellationToken.CanBeCanceled)
+            {
+                await Task.CompletedTask.ForceAsync(); // queue the remainder of the work to avoid blocking the caller
+                int timeout = 10000;
+                const int MaxTimeoutMicroseconds = 500000;
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (socket.Poll(timeout, SelectMode.SelectRead))
+                    {
+                        return ReadCore(buffer, offset, count);
+                    }
+                    timeout = Math.Min(timeout * 2, MaxTimeoutMicroseconds);
+                }
+            }
+
+            // The token wasn't cancelable, so we can simply use an async receive on the socket.
             try
             {
-                return cancellationToken.CanBeCanceled ?
-                    ReadCoreWithCancellation(buffer, offset, count, cancellationToken) :
-                    ReadCoreNoCancellation(buffer, offset, count);
+                return await socket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), SocketFlags.None).ConfigureAwait(false);
             }
-            finally
+            catch (SocketException e)
             {
-                activeAsync.Release();
+                throw GetIOExceptionForSocketException(e);
             }
         }
 
         private async Task WriteAsyncCore(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            SemaphoreSlim activeAsync = EnsureAsyncActiveSemaphoreInitialized();
-            await activeAsync.WaitAsync(cancellationToken).ForceAsync();
+            Debug.Assert(this is NamedPipeClientStream || this is NamedPipeServerStream, $"Expected a named pipe, got a {GetType()}");
             try
             {
-                if (cancellationToken.CanBeCanceled)
-                    WriteCoreWithCancellation(buffer, offset, count, cancellationToken);
-                else
-                    WriteCoreNoCancellation(buffer, offset, count);
+                while (count > 0)
+                {
+                    // cancellationToken is (mostly) ignored.  We could institute a polling loop like we do for reads if 
+                    // cancellationToken.CanBeCanceled, but that adds costs regardless of whether the operation will be canceled, and 
+                    // most writes will complete immediately as they simply store data into the socket's buffer.  The only time we end 
+                    // up using it in a meaningful way is if a write completes partially, we'll check it on each individual write operation.
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    int bytesWritten = await _handle.NamedPipeSocket.SendAsync(new ArraySegment<byte>(buffer, offset, count), SocketFlags.None).ConfigureAwait(false);
+                    Debug.Assert(bytesWritten <= count);
+
+                    count -= bytesWritten;
+                    offset += bytesWritten;
+                }
             }
-            finally
+            catch (SocketException e)
             {
-                activeAsync.Release();
+                throw GetIOExceptionForSocketException(e);
             }
+        }
+
+        private IOException GetIOExceptionForSocketException(SocketException e)
+        {
+            if (e.SocketErrorCode == SocketError.Shutdown) // EPIPE
+            {
+                State = PipeState.Broken;
+            }
+            return new IOException(e.Message, e);
         }
 
         // Blocks until the other end of the pipe has read in all written buffer.
@@ -121,7 +244,11 @@ namespace System.IO.Pipes
                 throw Error.GetWriteNotSupported();
             }
 
-            throw new PlatformNotSupportedException(); // no mechanism for this on Unix
+            // For named pipes on sockets, we could potentially partially implement this
+            // via ioctl and TIOCOUTQ, which provides the number of unsent bytes.  However, 
+            // that would require polling, and it wouldn't actually mean that the other
+            // end has read all of the data, just that the data has left this end's buffer.
+            throw new PlatformNotSupportedException(); 
         }
 
         // Gets the transmission mode for the pipe.  This is virtual so that subclassing types can 
@@ -188,12 +315,12 @@ namespace System.IO.Pipes
                 CheckPipePropertyOperations();
                 if (value < PipeTransmissionMode.Byte || value > PipeTransmissionMode.Message)
                 {
-                    throw new ArgumentOutOfRangeException("value", SR.ArgumentOutOfRange_TransmissionModeByteOrMsg);
+                    throw new ArgumentOutOfRangeException(nameof(value), SR.ArgumentOutOfRange_TransmissionModeByteOrMsg);
                 }
 
                 if (value != PipeTransmissionMode.Byte) // Unix pipes are only byte-based, not message-based
                 {
-                    throw new PlatformNotSupportedException();
+                    throw new PlatformNotSupportedException(SR.PlatformNotSupported_MessageTransmissionMode);
                 }
 
                 // nop, since it's already the only valid value
@@ -203,8 +330,6 @@ namespace System.IO.Pipes
         // -----------------------------
         // ---- PAL layer ends here ----
         // -----------------------------
-
-        private static string s_pipeDirectoryPath;
 
         /// <summary>
         /// We want to ensure that only one asynchronous operation is actually in flight
@@ -219,62 +344,9 @@ namespace System.IO.Pipes
             return LazyInitializer.EnsureInitialized(ref _asyncActiveSemaphore, () => new SemaphoreSlim(1, 1));
         }
 
-        private static string EnsurePipeDirectoryPath()
-        {
-            const string PipesFeatureName = "pipes";
-
-            // Ideally this would simply use PersistedFiles.GetTempFeatureDirectory(PipesFeatureName) and then
-            // Directory.CreateDirectory to ensure it exists.  But this assembly doesn't reference System.IO.FileSystem.
-            // As such, we'd be calling GetTempFeatureDirectory, only to then need to parse it in order
-            // to create each of the individual directories as part of the path.  We instead access the named portions 
-            // of the path directly and do the building of the path and directory structure manually.
-
-            // First ensure we know what the full path should be, e.g. /tmp/.dotnet/corefx/pipes/
-            string fullPath = s_pipeDirectoryPath;
-            string tempPath = null;
-            if (fullPath == null)
-            {
-                tempPath = Path.GetTempPath();
-                fullPath = Path.Combine(tempPath, PersistedFiles.TopLevelHiddenDirectory, PersistedFiles.SecondLevelDirectory, PipesFeatureName);
-                s_pipeDirectoryPath = fullPath;
-            }
-
-            // Then create the directory if it doesn't already exist.  If we get any error back from stat,
-            // just proceed to build up the directory, failing in the CreateDirectory calls if there's some
-            // problem.  Similarly, it's possible stat succeeds but the path is a file rather than directory; we'll
-            // call that success for now and let this fail later when the code tries to create a file in this "directory"
-            // (we don't want to overwrite/delete whatever that unknown file may be, and this is similar to other cases
-            // we can't control where the file system is manipulated concurrently with and separately from this code).
-            Interop.Sys.FileStatus ignored;
-            bool pathExists = Interop.Sys.Stat(fullPath, out ignored) == 0;
-            if (!pathExists)
-            {
-                // We need to build up the directory manually.  Ensure we have the temp directory in which
-                // we'll create the structure, e.g. /tmp/
-                if (tempPath == null)
-                {
-                    tempPath = Path.GetTempPath();
-                }
-                Debug.Assert(Interop.Sys.Stat(tempPath, out ignored) == 0, "Path.GetTempPath() directory could not be accessed");
-
-                // Create /tmp/.dotnet/ if it doesn't exist.
-                string partialPath = Path.Combine(tempPath, PersistedFiles.TopLevelHiddenDirectory);
-                CreateDirectory(partialPath);
-
-                // Create /tmp/.dotnet/corefx/ if it doesn't exist
-                partialPath = Path.Combine(partialPath, PersistedFiles.SecondLevelDirectory);
-                CreateDirectory(partialPath);
-
-                // Create /tmp/.dotnet/corefx/pipes/ if it doesn't exist
-                CreateDirectory(fullPath);
-            }
-
-            return fullPath;
-        }
-
         private static void CreateDirectory(string directoryPath)
         {
-            int result = Interop.Sys.MkDir(directoryPath, (int)Interop.Sys.Permissions.S_IRWXU);
+            int result = Interop.Sys.MkDir(directoryPath, (int)Interop.Sys.Permissions.Mask);
 
             // If successful created, we're done.
             if (result >= 0)
@@ -287,149 +359,6 @@ namespace System.IO.Pipes
 
             // Otherwise, fail.
             throw Interop.GetExceptionForIoErrno(errorInfo, directoryPath, isDirectory: true);
-        }
-
-        internal static Interop.Sys.OpenFlags TranslateFlags(PipeDirection direction, PipeOptions options, HandleInheritability inheritability)
-        {
-            // Translate direction
-            Interop.Sys.OpenFlags flags =
-                direction == PipeDirection.InOut ? Interop.Sys.OpenFlags.O_RDWR :
-                direction == PipeDirection.Out ? Interop.Sys.OpenFlags.O_WRONLY :
-                Interop.Sys.OpenFlags.O_RDONLY;
-
-            // Translate options
-            if ((options & PipeOptions.WriteThrough) != 0)
-            {
-                flags |= Interop.Sys.OpenFlags.O_SYNC;
-            }
-
-            // Translate inheritability.
-            if ((inheritability & HandleInheritability.Inheritable) == 0)
-            {
-                flags |= Interop.Sys.OpenFlags.O_CLOEXEC;
-            }
-            
-            // PipeOptions.Asynchronous is ignored, at least for now.  Asynchronous processing
-            // is handling just by queueing a work item to do the work synchronously on a pool thread.
-
-            return flags;
-        }
-
-        private unsafe int ReadCoreNoCancellation(byte[] buffer, int offset, int count)
-        {
-            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
-            fixed (byte* bufPtr = buffer)
-            {
-                int result = CheckPipeCall(Interop.Sys.Read(_handle, bufPtr + offset, count));
-                Debug.Assert(result <= count);
-
-                return result;
-            }
-        }
-
-        private unsafe int ReadCoreWithCancellation(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
-            Debug.Assert(cancellationToken.CanBeCanceled, "ReadCoreNoCancellation should be used if cancellation can't happen");
-
-            // Register for a cancellation request.  This will throw if cancellation has already been requested,
-            // and otherwise will write to the cancellation pipe if/when cancellation has been requested.
-            using (DescriptorCancellationRegistration cancellation = RegisterForCancellation(cancellationToken))
-            {
-                bool gotRef = false;
-                try
-                {
-                    cancellation.Poll.DangerousAddRef(ref gotRef);
-                    fixed (byte* bufPtr = buffer)
-                    {
-                        // We want to wait for data to be available on either the pipe we want to read from
-                        // or on the cancellation pipe, which would signal a cancellation request.
-                        Interop.Sys.PollEvent* events = stackalloc Interop.Sys.PollEvent[2];
-                        events[0] = new Interop.Sys.PollEvent
-                        {
-                            FileDescriptor = (int)_handle.DangerousGetHandle(),
-                            Events = Interop.Sys.PollEvents.POLLIN
-                        };
-                        events[1] = new Interop.Sys.PollEvent
-                        {
-                            FileDescriptor = (int)cancellation.Poll.DangerousGetHandle(),
-                            Events = Interop.Sys.PollEvents.POLLIN
-                        };
-
-                        // Some systems (at least OS X) appear to have a race condition in poll with FIFOs where the poll can 
-                        // end up not noticing writes of greater than the internal buffer size.  Restarting the poll causes it 
-                        // to notice. To deal with that, we loop around poll, first starting with a small timeout and backing off
-                        // to a larger one.  This ensures we'll at least eventually notice such changes in these corner
-                        // cases, while not adding too much overhead on systems that don't suffer from the problem.
-                        const int InitialMsTimeout = 30, MaxMsTimeout = 2000;
-                        for (int timeout = InitialMsTimeout; ; timeout = Math.Min(timeout * 2, MaxMsTimeout))
-                        {
-                            // Do the poll.
-                            uint signaledFdCount;
-                            Interop.CheckIo(Interop.Sys.Poll(events, 2, timeout, &signaledFdCount));
-
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            if (signaledFdCount != 0)
-                            {
-                                // Our pipe is ready.  Break out of the loop to read from it.
-                                Debug.Assert((events[0].TriggeredEvents & Interop.Sys.PollEvents.POLLIN) != 0, "Expected revents on read fd to have POLLIN set");
-                                break;
-                            }
-                        }
-
-                        // Read it.
-                        Debug.Assert((events[0].TriggeredEvents & Interop.Sys.PollEvents.POLLIN) != 0);
-                        int result = CheckPipeCall(Interop.Sys.Read(_handle, bufPtr + offset, count));
-                        Debug.Assert(result <= count);
-
-                        Debug.Assert(result >= 0);
-
-                        // return what we read.
-                        return result;
-                    }
-                }
-                finally
-                {
-                    if (gotRef)
-                        cancellation.Poll.DangerousRelease();
-                }
-            }
-        }
-
-        private unsafe void WriteCoreNoCancellation(byte[] buffer, int offset, int count)
-        {
-            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
-
-            fixed (byte* bufPtr = buffer)
-            {
-                while (count > 0)
-                {
-                    int bytesWritten = CheckPipeCall(Interop.Sys.Write(_handle, bufPtr + offset, count));
-                    Debug.Assert(bytesWritten <= count);
-
-                    count -= bytesWritten;
-                    offset += bytesWritten;
-                }
-            }
-        }
-
-        private void WriteCoreWithCancellation(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            DebugAssertReadWriteArgs(buffer, offset, count, _handle);
-
-            // NOTE:
-            // We currently ignore cancellationToken.  Unlike on Windows, writes to pipes on Unix are likely to succeed
-            // immediately, even if no reader is currently listening, as long as there's room in the kernel buffer.
-            // However it's still possible for write to block if the buffer is full.  We could try using a poll mechanism
-            // like we do for read, but checking for POLLOUT is only going to tell us that there's room to write at least
-            // one byte to the pipe, not enough room to write enough that we won't block.  The only way to guarantee
-            // that would seem to be writing one byte at a time, which has huge overheads when writing large chunks of data.
-            // Given all this, at least for now we just do an initial check for cancellation and then call to the 
-            // non -cancelable version.
-
-            cancellationToken.ThrowIfCancellationRequested();
-            WriteCoreNoCancellation(buffer, offset, count);
         }
 
         /// <summary>Creates an anonymous pipe.</summary>
@@ -452,71 +381,7 @@ namespace System.IO.Pipes
             writer.SetHandle(fds[Interop.Sys.WriteEndOfPipe]);
         }
 
-        /// <summary>
-        /// Creates a cancellation registration.  This creates a pipe that'll have one end written to
-        /// when cancellation is requested.  The other end can be poll'd to see when cancellation has occurred.
-        /// </summary>
-        private static unsafe DescriptorCancellationRegistration RegisterForCancellation(CancellationToken cancellationToken)
-        {
-            Debug.Assert(cancellationToken.CanBeCanceled);
-
-            // Fast path: before doing any real work, throw if cancellation has already been requested
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Create a pipe we can use to send a signal to the reader/writer
-            // to wake it up if blocked.
-            SafePipeHandle poll, send;
-            CreateAnonymousPipe(HandleInheritability.None, out poll, out send);
-
-            // Register a cancellation callback to send a byte to the cancellation pipe
-            CancellationTokenRegistration reg = cancellationToken.Register(s =>
-            {
-                SafePipeHandle sendRef = (SafePipeHandle)s;
-                    byte b = 1;
-                Interop.CheckIo(Interop.Sys.Write(sendRef, &b, 1));
-            }, send);
-
-            // Return a disposable struct that will unregister the cancellation registration
-            // and dispose of the pipe.
-            return new DescriptorCancellationRegistration(reg, poll, send);
-        }
-
-        /// <summary>Disposable struct that'll clean up the results of a RegisterForCancellation operation.</summary>
-        private struct DescriptorCancellationRegistration : IDisposable
-        {
-            private CancellationTokenRegistration _registration;
-            private readonly SafePipeHandle _poll;
-            private readonly SafePipeHandle _send;
-
-            internal DescriptorCancellationRegistration(
-                CancellationTokenRegistration registration,
-                SafePipeHandle poll, SafePipeHandle send)
-            {
-                Debug.Assert(poll != null);
-                Debug.Assert(send != null);
-
-                _registration = registration;
-                _poll = poll;
-                _send = send;
-            }
-
-            internal SafePipeHandle Poll { get { return _poll; } }
-
-            public void Dispose()
-            {
-                // Dispose the registration prior to disposing of the pipe handles.
-                // Otherwise a concurrent cancellation request could try to use
-                // the already disposed pipe.
-                _registration.Dispose();
-
-                if (_send != null)
-                    _send.Dispose();
-                if (_poll != null)
-                    _poll.Dispose();
-            }
-        }
-
-        private int CheckPipeCall(int result)
+        internal int CheckPipeCall(int result)
         {
             if (result == -1)
             {
@@ -531,15 +396,6 @@ namespace System.IO.Pipes
             return result;
         }
 
-        internal void InitializeBufferSize(SafePipeHandle handle, int bufferSize)
-        {
-            // bufferSize is just advisory and ignored if platform does not support setting pipe capacity via fcntl.
-            if (bufferSize > 0 && Interop.Sys.Fcntl.CanGetSetPipeSz)
-            {
-                CheckPipeCall(Interop.Sys.Fcntl.SetPipeSz(handle, bufferSize));
-            }
-        }
-
         private int GetPipeBufferSize()
         {
             if (!Interop.Sys.Fcntl.CanGetSetPipeSz)
@@ -548,8 +404,7 @@ namespace System.IO.Pipes
             }
 
             // If we have a handle, get the capacity of the pipe (there's no distinction between in/out direction).
-            // If we don't, the pipe has been created but not yet connected (in the case of named pipes),
-            // so just return the buffer size that was passed to the constructor.
+            // If we don't, just return the buffer size that was passed to the constructor.
             return _handle != null ?
                 CheckPipeCall(Interop.Sys.Fcntl.GetPipeSz(_handle)) :
                 _outBufferSize;
@@ -560,6 +415,36 @@ namespace System.IO.Pipes
             var flags = (inheritability & HandleInheritability.Inheritable) == 0 ?
                 Interop.Sys.PipeFlags.O_CLOEXEC : 0;
             Interop.CheckIo(Interop.Sys.Pipe(fdsptr, flags));
+        }
+
+        internal static void ConfigureSocket(
+            Socket s, SafePipeHandle pipeHandle, 
+            PipeDirection direction, int inBufferSize, int outBufferSize, HandleInheritability inheritability)
+        {
+            if (inBufferSize > 0)
+            {
+                s.ReceiveBufferSize = inBufferSize;
+            }
+
+            if (outBufferSize > 0)
+            {
+                s.SendBufferSize = outBufferSize;
+            }
+
+            if (inheritability != HandleInheritability.Inheritable)
+            {
+                Interop.Sys.Fcntl.SetCloseOnExec(pipeHandle); // ignore failures, best-effort attempt
+            }
+
+            switch (direction)
+            {
+                case PipeDirection.In:
+                    s.Shutdown(SocketShutdown.Send);
+                    break;
+                case PipeDirection.Out:
+                    s.Shutdown(SocketShutdown.Receive);
+                    break;
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections;
@@ -264,11 +265,11 @@ namespace System.Net.Sockets
                     // combination must be in bounds of the array.
                     if (offset < 0 || offset > buffer.Length)
                     {
-                        throw new ArgumentOutOfRangeException("offset");
+                        throw new ArgumentOutOfRangeException(nameof(offset));
                     }
                     if (count < 0 || count > (buffer.Length - offset))
                     {
-                        throw new ArgumentOutOfRangeException("count");
+                        throw new ArgumentOutOfRangeException(nameof(count));
                     }
 
                     _buffer = buffer;
@@ -488,9 +489,13 @@ namespace System.Net.Sockets
                 {
                     // Otherwise we're doing a normal ConnectAsync - cancel it by closing the socket.
                     // _currentSocket will only be null if _multipleConnect was set, so we don't have to check.
-                    if (_currentSocket == null && GlobalLog.IsEnabled)
+                    if (_currentSocket == null)
                     {
-                        GlobalLog.Assert("SocketAsyncEventArgs::CancelConnectAsync - CurrentSocket and MultipleConnect both null!");
+                        if (GlobalLog.IsEnabled)
+                        {
+                            GlobalLog.Assert("SocketAsyncEventArgs::CancelConnectAsync - CurrentSocket and MultipleConnect both null!");
+                        }
+                        Debug.Fail("SocketAsyncEventArgs::CancelConnectAsync - CurrentSocket and MultipleConnect both null!");
                     }
                     _currentSocket.Dispose();
                 }

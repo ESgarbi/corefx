@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Xml;
@@ -208,19 +209,20 @@ namespace CoreXml.Test.XLinq
                 }
 
                 [Fact]
-                [ActiveIssue(641)]
                 public void ReadOuterXmlOnXmlDeclarationAttributes()
                 {
-                    XmlReader DataReader = GetReader();//GetReader(pGenericXml);
-                    DataReader.Read();
-                    try
+                    using (XmlReader DataReader = GetPGenericXmlReader())
                     {
-                        DataReader.MoveToAttribute(DataReader.AttributeCount / 2);
-                        throw new TestException(TestResult.Failed, "");
+                        DataReader.Read();
+                        try
+                        {
+                            DataReader.MoveToAttribute(DataReader.AttributeCount / 2);
+                            throw new TestException(TestResult.Failed, "");
+                        }
+                        catch (ArgumentOutOfRangeException) { }
+                        Assert.True(TestLog.Compare(DataReader.ReadOuterXml(), String.Empty, "outer"));
+                        Assert.True((DataReader.NodeType != XmlNodeType.Attribute) || (DataReader.Name != String.Empty) || (DataReader.Value != "UTF-8"));
                     }
-                    catch (ArgumentOutOfRangeException) { }
-                    Assert.True(TestLog.Compare(DataReader.ReadOuterXml(), String.Empty, "outer"));
-                    Assert.True(TestLog.Compare(VerifyNode(DataReader, XmlNodeType.Attribute, String.Empty, "UTF-8"), false, "vn"));
                 }
 
                 //[Variation("ReadOuterXml on element with entities, EntityHandling = ExpandCharEntities")]

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -20,19 +21,11 @@ namespace System.IO
         private static readonly int MaxPath = Interop.Sys.MaxPath;
         private static readonly int MaxLongPath = MaxPath;
 
-        private static bool IsDirectoryOrVolumeSeparator(char c)
-        {
-            // The directory separator is the same as the volume separator,
-            // so we only need to check one.
-            Debug.Assert(DirectorySeparatorChar == VolumeSeparatorChar);
-            return PathInternal.IsDirectorySeparator(c);
-        }
-
         // Expands the given path to a fully qualified path. 
         public static string GetFullPath(string path)
         {
             if (path == null)
-                throw new ArgumentNullException("path");
+                throw new ArgumentNullException(nameof(path));
 
             if (path.Length == 0)
                 throw new ArgumentException(SR.Arg_PathIllegal);
@@ -177,7 +170,7 @@ namespace System.IO
                 path + DirectorySeparatorChar;
         }
 
-        private static string InternalGetTempFileName(bool checkHost)
+        public static string GetTempFileName()
         {
             const string Suffix = ".tmp";
             const int SuffixByteLength = 4;
@@ -211,14 +204,15 @@ namespace System.IO
             return IsPathRooted(path) ? DirectorySeparatorCharAsString : String.Empty;
         }
 
-        private static byte[] CreateCryptoRandomByteArray(int byteLength)
+        private static unsafe void GetCryptoRandomBytes(byte* bytes, int byteCount)
         {
-            var arr = new byte[byteLength];
-            if (!Interop.Crypto.GetRandomBytes(arr, arr.Length))
+            Debug.Assert(bytes != null);
+            Debug.Assert(byteCount >= 0);
+
+            if (!Interop.Crypto.GetRandomBytes(bytes, byteCount))
             {
                 throw new InvalidOperationException(SR.InvalidOperation_Cryptography);
             }
-            return arr;
         }
     }
 }

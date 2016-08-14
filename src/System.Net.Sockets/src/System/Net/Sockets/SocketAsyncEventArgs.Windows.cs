@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections;
@@ -161,7 +162,7 @@ namespace System.Net.Sockets
 
         private void CompleteIOCPOperation()
         {
-            // TODO: Optimization to remove callbacks if the operations are completed synchronously:
+            // TODO #4900: Optimization to remove callbacks if the operations are completed synchronously:
             //       Use SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS).
 
             // If SetFileCompletionNotificationModes(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) is not set on this handle
@@ -931,7 +932,7 @@ namespace System.Net.Sockets
             }
         }
 
-        // Sets up an Overlapped object with with multiple buffers pinned.
+        // Sets up an Overlapped object with multiple buffers pinned.
         unsafe private void SetupOverlappedMultiple()
         {
             ArraySegment<byte>[] tempList = new ArraySegment<byte>[_bufferList.Count];
@@ -1050,17 +1051,17 @@ namespace System.Net.Sockets
             switch (_pinState)
             {
                 case PinState.SingleAcceptBuffer:
-                    SocketsEventSource.Dump(_completedOperation, _acceptBuffer, 0, size);
+                    SocketsEventSource.Dump(_acceptBuffer, 0, size);
                     break;
 
                 case PinState.SingleBuffer:
-                    SocketsEventSource.Dump(_completedOperation, _buffer, _offset, size);
+                    SocketsEventSource.Dump(_buffer, _offset, size);
                     break;
 
                 case PinState.MultipleBuffer:
                     foreach (WSABuffer wsaBuffer in _wsaBufferArray)
                     {
-                        SocketsEventSource.Dump(_completedOperation, wsaBuffer.Pointer, Math.Min(wsaBuffer.Length, size));
+                        SocketsEventSource.Dump(wsaBuffer.Pointer, Math.Min(wsaBuffer.Length, size));
                         if ((size -= wsaBuffer.Length) <= 0)
                         {
                             break;
@@ -1082,7 +1083,7 @@ namespace System.Net.Sockets
                     if (spe._buffer != null && spe._count > 0)
                     {
                         // This element is a buffer.
-                        SocketsEventSource.Dump(_completedOperation, spe._buffer, spe._offset, Math.Min(spe._count, size));
+                        SocketsEventSource.Dump(spe._buffer, spe._offset, Math.Min(spe._count, size));
                     }
                     else if (spe._filePath != null)
                     {
@@ -1228,10 +1229,13 @@ namespace System.Net.Sockets
             GlobalLog.SetThreadSource(ThreadKinds.CompletionPort);
             using (GlobalLog.SetThreadKind(ThreadKinds.System))
             {
-                GlobalLog.Enter(
-                    "CompletionPortCallback",
-                    "errorCode: " + errorCode + ", numBytes: " + numBytes +
-                    ", overlapped#" + ((IntPtr)nativeOverlapped).ToString("x"));
+                if (GlobalLog.IsEnabled)
+                {
+                    GlobalLog.Enter(
+                        "CompletionPortCallback",
+                        "errorCode: " + errorCode + ", numBytes: " + numBytes +
+                        ", overlapped#" + ((IntPtr)nativeOverlapped).ToString("x"));
+                }
 #endif
                 SocketFlags socketFlags = SocketFlags.None;
                 SocketError socketError = (SocketError)errorCode;
@@ -1276,7 +1280,10 @@ namespace System.Net.Sockets
                 }
 
 #if DEBUG
-                GlobalLog.Leave("CompletionPortCallback");
+                if (GlobalLog.IsEnabled)
+                {
+                    GlobalLog.Leave("CompletionPortCallback");
+                }
             }
 #endif
         }

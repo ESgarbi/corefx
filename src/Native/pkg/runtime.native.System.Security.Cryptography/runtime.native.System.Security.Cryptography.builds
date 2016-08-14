@@ -3,20 +3,32 @@
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <ItemGroup>
     <Project Include="runtime.native.System.Security.Cryptography.pkgproj"/>
-    <Project Include="centos\runtime.native.System.Security.Cryptography.pkgproj">
-      <!-- currently we build both "centos" and "ubuntu" packages on Linux,
-           but will only publish one of the packages based on what OS we
-           were actually building on.  
-           Remove this when fixing https://github.com/dotnet/corefx/issues/5190 -->
-      <OSGroup>Linux</OSGroup>
+    <Project Include="rhel\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>rhel.7</OSGroup>
       <Platform>amd64</Platform>
     </Project>
-    <Project Include="ubuntu\runtime.native.System.Security.Cryptography.pkgproj">
-      <OSGroup>Linux</OSGroup>
+    <Project Include="debian\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>debian.8</OSGroup>
+      <Platform>amd64</Platform>
+    </Project>
+    <Project Include="fedora\23\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>fedora.23</OSGroup>
+      <Platform>amd64</Platform>
+    </Project>
+    <Project Include="ubuntu\14.04\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>ubuntu.14.04</OSGroup>
+      <Platform>amd64</Platform>
+    </Project>
+    <Project Include="ubuntu\16.04\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>ubuntu.16.04</OSGroup>
       <Platform>amd64</Platform>
     </Project>
     <Project Include="osx\runtime.native.System.Security.Cryptography.pkgproj">
-      <OSGroup>OSX</OSGroup>
+      <OSGroup>osx.10</OSGroup>
+      <Platform>amd64</Platform>
+    </Project>
+    <Project Include="opensuse\13.2\runtime.native.System.Security.Cryptography.pkgproj">
+      <OSGroup>opensuse.13.2</OSGroup>
       <Platform>amd64</Platform>
     </Project>
   </ItemGroup>

@@ -1,6 +1,7 @@
-@echo off
+@if "%_echo%" neq "on" echo off
 rem
 rem This file invokes cmake and generates the build system for windows.
+
 set argC=0
 for %%x in (%*) do Set /A argC+=1
 
@@ -8,12 +9,7 @@ if NOT %argC%==3 GOTO :USAGE
 if %1=="/?" GOTO :USAGE
 
 setlocal
-set basePath=%__sourceDir%
-:: remove quotes
-set "basePath=%basePath:"=%"
-:: remove trailing slash
-if %basePath:~-1%==\ set "basePath=%basePath:~0,-1%"
-
+set __sourceDir=%~dp0
 :: Default to vs2013 unless vs2015 is specified
 set __VSString=12 2013
 if /i "%2" == "vs2015" (set __VSString=14 2015)
@@ -22,6 +18,7 @@ if /i "%2" == "vs2015" (set __VSString=14 2015)
 if /i "%3" == "x86"     (set __VSString=%__VSString%)
 if /i "%3" == "x64"     (set __VSString=%__VSString% Win64)
 if /i "%3" == "arm"     (set __VSString=%__VSString% ARM)
+if /i "%3" == "arm64"   (set __VSString=%__VSString% Win64)
 
 if defined CMakePath goto DoGen
 
@@ -31,7 +28,7 @@ for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy RemoteSigned "&
 popd
 
 :DoGen
-"%CMakePath%" "-DCMAKE_USER_MAKE_RULES_OVERRIDE=%basePath%/windows-compiler-override.txt" "-DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE%" -G "Visual Studio %__VSString%" -B. -H%1
+"%CMakePath%" "-DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE%" "-DCMAKE_INSTALL_PREFIX=%__CMakeBinDir%" -G "Visual Studio %__VSString%" -B. -H%1
 endlocal
 GOTO :DONE
 
@@ -45,9 +42,3 @@ GOTO :DONE
 
 :DONE
   EXIT /B 0
-
-
-
-
-
-

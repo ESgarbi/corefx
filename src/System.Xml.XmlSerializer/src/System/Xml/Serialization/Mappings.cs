@@ -1,8 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xml.Serialization
 {
@@ -14,7 +12,7 @@ namespace System.Xml.Serialization
     using System.ComponentModel;
     using System.Xml;
     using System.CodeDom.Compiler;
-    using IComparer = System.Collections.Generic.IComparer<object>;
+    using System.Collections.Generic;
 
     // These classes represent a mapping between classes and a particular XML format.
     // There are two class of mapping information: accessors (such as elements and
@@ -93,7 +91,7 @@ namespace System.Xml.Serialization
             else
             {
                 if (colon == 0 || colon == name.Length - 1)
-                    throw new ArgumentException(SR.Format(SR.Xml_InvalidNameChars, name), "name");
+                    throw new ArgumentException(SR.Format(SR.Xml_InvalidNameChars, name), nameof(name));
                 return new XmlQualifiedName(XmlConvert.EncodeLocalName(name.Substring(colon + 1)), XmlConvert.EncodeLocalName(name.Substring(0, colon))).ToString();
             }
         }
@@ -794,13 +792,10 @@ namespace System.Xml.Serialization
         }
     }
 
-    internal class MemberMappingComparer : IComparer
+    internal class MemberMappingComparer : IComparer<MemberMapping>
     {
-        public int Compare(object o1, object o2)
+        public int Compare(MemberMapping m1, MemberMapping m2)
         {
-            MemberMapping m1 = (MemberMapping)o1;
-            MemberMapping m2 = (MemberMapping)o2;
-
             bool m1Text = m1.IsText;
             if (m1Text)
             {

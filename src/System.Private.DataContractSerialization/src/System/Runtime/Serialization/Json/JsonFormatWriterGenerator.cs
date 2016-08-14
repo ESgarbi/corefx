@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Xml;
@@ -62,7 +63,7 @@ namespace System.Runtime.Serialization.Json
             internal JsonFormatClassWriterDelegate GenerateClassWriter(ClassDataContract classContract)
             {
                 _ilg = new CodeGenerator();
-                bool memberAccessFlag = classContract.RequiresMemberAccessForWrite(null, JsonGlobals.JsonSerializationPatterns);
+                bool memberAccessFlag = classContract.RequiresMemberAccessForWrite(null);
                 try
                 {
                     BeginMethod(_ilg, "Write" + DataContract.SanitizeTypeName(classContract.StableName.Name) + "ToJson", typeof(JsonFormatClassWriterDelegate), memberAccessFlag);
@@ -71,7 +72,7 @@ namespace System.Runtime.Serialization.Json
                 {
                     if (memberAccessFlag)
                     {
-                        classContract.RequiresMemberAccessForWrite(securityException, JsonGlobals.JsonSerializationPatterns);
+                        classContract.RequiresMemberAccessForWrite(securityException);
                     }
                     else
                     {
@@ -87,7 +88,7 @@ namespace System.Runtime.Serialization.Json
             internal JsonFormatCollectionWriterDelegate GenerateCollectionWriter(CollectionDataContract collectionContract)
             {
                 _ilg = new CodeGenerator();
-                bool memberAccessFlag = collectionContract.RequiresMemberAccessForWrite(null, JsonGlobals.JsonSerializationPatterns);
+                bool memberAccessFlag = collectionContract.RequiresMemberAccessForWrite(null);
                 try
                 {
                     BeginMethod(_ilg, "Write" + DataContract.SanitizeTypeName(collectionContract.StableName.Name) + "ToJson", typeof(JsonFormatCollectionWriterDelegate), memberAccessFlag);
@@ -96,7 +97,7 @@ namespace System.Runtime.Serialization.Json
                 {
                     if (memberAccessFlag)
                     {
-                        collectionContract.RequiresMemberAccessForWrite(securityException, JsonGlobals.JsonSerializationPatterns);
+                        collectionContract.RequiresMemberAccessForWrite(securityException);
                     }
                     else
                     {

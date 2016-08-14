@@ -1,17 +1,27 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
+using System.Reflection;
 using Xunit;
 
-namespace Tests.ExpressionCompiler.MemberAccess
+namespace System.Linq.Expressions.Tests
 {
     public static class MemberAccessTests
     {
-        [Fact]
-        public static void CheckMemberAccessStructInstanceFieldTest()
+        private class UnreadableIndexableClass
+        {
+            public int this[int index]
+            {
+                set { }
+            }
+        }
+
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructInstanceFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -19,13 +29,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(new FS() { II = 42 }),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessStructStaticFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructStaticFieldTest(bool useInterpreter)
         {
             FS.SI = 42;
             try
@@ -37,7 +48,7 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             typeof(FS),
                             "SI"),
                         Enumerable.Empty<ParameterExpression>());
-                Func<int> f = e.Compile();
+                Func<int> f = e.Compile(useInterpreter);
 
                 Assert.Equal(42, f());
             }
@@ -47,8 +58,9 @@ namespace Tests.ExpressionCompiler.MemberAccess
             }
         }
 
-        [Fact]
-        public static void CheckMemberAccessStructConstFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructConstFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -57,13 +69,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         typeof(FS),
                         "CI"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessStructStaticReadOnlyFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructStaticReadOnlyFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -72,13 +85,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         typeof(FS),
                         "RI"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessStructInstancePropertyTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructInstancePropertyTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -86,13 +100,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(new PS() { II = 42 }),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessStructStaticPropertyTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessStructStaticPropertyTest(bool useInterpreter)
         {
             PS.SI = 42;
             try
@@ -104,7 +119,7 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             typeof(PS),
                             "SI"),
                         Enumerable.Empty<ParameterExpression>());
-                Func<int> f = e.Compile();
+                Func<int> f = e.Compile(useInterpreter);
 
                 Assert.Equal(42, f());
             }
@@ -114,8 +129,9 @@ namespace Tests.ExpressionCompiler.MemberAccess
             }
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassInstanceFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstanceFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -123,13 +139,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(new FC() { II = 42 }),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassStaticFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassStaticFieldTest(bool useInterpreter)
         {
             FC.SI = 42;
             try
@@ -141,7 +158,7 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             typeof(FC),
                             "SI"),
                         Enumerable.Empty<ParameterExpression>());
-                Func<int> f = e.Compile();
+                Func<int> f = e.Compile(useInterpreter);
 
                 Assert.Equal(42, f());
             }
@@ -151,8 +168,9 @@ namespace Tests.ExpressionCompiler.MemberAccess
             }
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassConstFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassConstFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -161,13 +179,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         typeof(FC),
                         "CI"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassStaticReadOnlyFieldTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassStaticReadOnlyFieldTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -176,13 +195,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         typeof(FC),
                         "RI"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassInstancePropertyTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstancePropertyTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -190,13 +210,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(new PC() { II = 42 }),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Equal(42, f());
         }
 
-        [Fact]
-        public static void CheckMemberAccessClassStaticPropertyTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassStaticPropertyTest(bool useInterpreter)
         {
             PC.SI = 42;
             try
@@ -208,7 +229,7 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             typeof(PC),
                             "SI"),
                         Enumerable.Empty<ParameterExpression>());
-                Func<int> f = e.Compile();
+                Func<int> f = e.Compile(useInterpreter);
 
                 Assert.Equal(42, f());
             }
@@ -218,8 +239,9 @@ namespace Tests.ExpressionCompiler.MemberAccess
             }
         }
 
-        [Fact] // [Issue(3217, "https://github.com/dotnet/corefx/issues/3217")]
-        public static void CheckMemberAccessClassInstanceFieldNullReferenceTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstanceFieldNullReferenceTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -227,13 +249,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(null, typeof(FC)),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Throws<NullReferenceException>(() => f());
         }
 
-        [Fact] // [Issue(3217, "https://github.com/dotnet/corefx/issues/3217")]
-        public static void CheckMemberAccessClassInstanceFieldAssignNullReferenceTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstanceFieldAssignNullReferenceTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -243,13 +266,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             "II"),
                         Expression.Constant(1)),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Throws<NullReferenceException>(() => f());
         }
 
-        [Fact] // [Issue(3217, "https://github.com/dotnet/corefx/issues/3217")]
-        public static void CheckMemberAccessClassInstancePropertyNullReferenceTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstancePropertyNullReferenceTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -257,13 +281,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         Expression.Constant(null, typeof(PC)),
                         "II"),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Throws<NullReferenceException>(() => f());
         }
 
-        [Fact] // [Issue(3217, "https://github.com/dotnet/corefx/issues/3217")]
-        public static void CheckMemberAccessClassInstanceIndexerNullReferenceTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstanceIndexerNullReferenceTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -272,13 +297,14 @@ namespace Tests.ExpressionCompiler.MemberAccess
                         "Item",
                         Expression.Constant(1)),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Throws<NullReferenceException>(() => f());
         }
 
-        [Fact] // [Issue(3217, "https://github.com/dotnet/corefx/issues/3217")]
-        public static void CheckMemberAccessClassInstanceIndexerAssignNullReferenceTest()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public static void CheckMemberAccessClassInstanceIndexerAssignNullReferenceTest(bool useInterpreter)
         {
             Expression<Func<int>> e =
                 Expression.Lambda<Func<int>>(
@@ -289,9 +315,21 @@ namespace Tests.ExpressionCompiler.MemberAccess
                             Expression.Constant(1)),
                         Expression.Constant(1)),
                     Enumerable.Empty<ParameterExpression>());
-            Func<int> f = e.Compile();
+            Func<int> f = e.Compile(useInterpreter);
 
             Assert.Throws<NullReferenceException>(() => f());
+        }
+
+        [Fact]
+        public static void AccessIndexedPropertyWithoutIndex()
+        {
+            Assert.Throws<ArgumentException>(null, () => Expression.Property(Expression.Default(typeof(List<int>)), typeof(List<int>).GetProperty("Item")));
+        }
+
+        [Fact]
+        public static void AccessIndexedPropertyWithoutIndexWriteOnly()
+        {
+            Assert.Throws<ArgumentException>(null, () => Expression.Property(Expression.Default(typeof(UnreadableIndexableClass)), typeof(UnreadableIndexableClass).GetProperty("Item")));
         }
     }
 }

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -18,19 +19,17 @@ namespace System.IO.Compression
 
         private static readonly DateTime s_invalidDateIndicator = new DateTime(ValidZipDate_YearMin, 1, 1, 0, 0, 0);
 
-
-        internal static Boolean EndsWithDirChar(String test)
-        {
-            return Path.GetFileName(test) == "";
-        }
-
         internal static Boolean RequiresUnicode(String test)
         {
             Debug.Assert(test != null);
 
             foreach (Char c in test)
             {
-                if (c > 127) return true;
+                // The Zip Format uses code page 437 when the Unicode bit is not set. This format
+                // is the same as ASCII for characters 32-126 but differs otherwise. If we can fit 
+                // the string into CP437 then we treat ASCII as acceptable.
+                if (c > 126 || c < 32)
+                    return true;
             }
 
             return false;
@@ -112,7 +111,7 @@ namespace System.IO.Compression
         {
             Int32 bufferPointer = 0;
             UInt32 currentSignature = 0;
-            Byte[] buffer = new Byte[BackwardsSeekingBufferSize];
+            byte[] buffer = new byte[BackwardsSeekingBufferSize];
 
             Boolean outOfBytes = false;
             Boolean signatureFound = false;

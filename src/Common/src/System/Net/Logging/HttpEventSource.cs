@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics.Tracing;
 using System.Net.Http;
@@ -13,11 +14,12 @@ namespace System.Net
         LocalizationResources = "FxResources.System.Net.Http.SR")]
     internal sealed class HttpEventSource : EventSource
     {
-        private const int ASSOCIATE_ID = 1;
-        private const int URI_BASE_ADDRESS_ID = 2;
-        private const int CONTENT_NULL_ID = 3;
-        private const int CLIENT_SEND_COMPLETED = 4;
-        private const int HEADERS_INVALID_VALUE_ID = 5;
+        private const int AssociateId = 1;
+        private const int UriBaseAddressId = 2;
+        private const int ContentNullId = 3;
+        private const int ClientSendCompletedId = 4;
+        private const int HeadersInvalidValueId = 5;
+        private const int HandlerMessageId = 6;
 
         private readonly static HttpEventSource s_log = new HttpEventSource();
         private HttpEventSource() { }
@@ -36,20 +38,21 @@ namespace System.Net
             {
                 return;
             }
+
             s_log.Associate(LoggingHash.GetObjectName(objA),
                             LoggingHash.HashInt(objA),
                             LoggingHash.GetObjectName(objB),
                             LoggingHash.HashInt(objB));
         }
 
-        [Event(ASSOCIATE_ID, Keywords = Keywords.Default,
+        [Event(AssociateId, Keywords = Keywords.Default,
             Level = EventLevel.Informational, Message = "[{0}#{1}]<-->[{2}#{3}]")]
         internal unsafe void Associate(string objectA, int objectAHash, string objectB, int objectBHash)
         {
-            const int SIZEDATA = 4;
+            const int SizeData = 4;
             fixed (char* arg1Ptr = objectA, arg2Ptr = objectB)
             {
-                EventData* dataDesc = stackalloc EventSource.EventData[SIZEDATA];
+                EventData* dataDesc = stackalloc EventSource.EventData[SizeData];
 
                 dataDesc[0].DataPointer = (IntPtr)(arg1Ptr);
                 dataDesc[0].Size = (objectA.Length + 1) * sizeof(char); // Size in bytes, including a null terminator. 
@@ -60,7 +63,7 @@ namespace System.Net
                 dataDesc[3].DataPointer = (IntPtr)(&objectBHash);
                 dataDesc[3].Size = sizeof(int);
 
-                WriteEventCore(ASSOCIATE_ID, SIZEDATA, dataDesc);
+                WriteEventCore(AssociateId, SizeData, dataDesc);
             }
         }
 
@@ -71,17 +74,18 @@ namespace System.Net
             {
                 return;
             }
+
             s_log.UriBaseAddress(baseAddress, LoggingHash.GetObjectName(obj), LoggingHash.HashInt(obj));
         }
 
-        [Event(URI_BASE_ADDRESS_ID, Keywords = Keywords.Debug,
+        [Event(UriBaseAddressId, Keywords = Keywords.Debug,
             Level = EventLevel.Informational)]
         internal unsafe void UriBaseAddress(string uriBaseAddress, string objName, int objHash)
         {
-            const int SIZEDATA = 3;
+            const int SizeData = 3;
             fixed (char* arg1Ptr = uriBaseAddress, arg2Ptr = objName)
             {
-                EventData* dataDesc = stackalloc EventSource.EventData[SIZEDATA];
+                EventData* dataDesc = stackalloc EventSource.EventData[SizeData];
 
                 dataDesc[0].DataPointer = (IntPtr)(arg1Ptr);
                 dataDesc[0].Size = (uriBaseAddress.Length + 1) * sizeof(char); // Size in bytes, including a null terminator. 
@@ -90,7 +94,7 @@ namespace System.Net
                 dataDesc[2].DataPointer = (IntPtr)(&objHash);
                 dataDesc[2].Size = sizeof(int);
 
-                WriteEventCore(URI_BASE_ADDRESS_ID, SIZEDATA, dataDesc);
+                WriteEventCore(UriBaseAddressId, SizeData, dataDesc);
             }
         }
 
@@ -101,14 +105,15 @@ namespace System.Net
             {
                 return;
             }
+
             s_log.ContentNull(LoggingHash.GetObjectName(obj), LoggingHash.HashInt(obj));
         }
 
-        [Event(CONTENT_NULL_ID, Keywords = Keywords.Debug,
+        [Event(ContentNullId, Keywords = Keywords.Debug,
             Level = EventLevel.Informational)]
         internal void ContentNull(string objName, int objHash)
         {
-            WriteEvent(CONTENT_NULL_ID, objName, objHash);
+            WriteEvent(ContentNullId, objName, objHash);
         }
 
         [NonEvent]
@@ -118,22 +123,24 @@ namespace System.Net
             {
                 return;
             }
+
             string responseString = "";
             if (response != null)
             {
                 responseString = response.ToString();
             }
+
             s_log.ClientSendCompleted(LoggingHash.HashInt(request), LoggingHash.HashInt(response), responseString, LoggingHash.HashInt(httpClient));
         }
 
-        [Event(CLIENT_SEND_COMPLETED, Keywords = Keywords.Debug,
+        [Event(ClientSendCompletedId, Keywords = Keywords.Debug,
             Level = EventLevel.Verbose)]
         internal unsafe void ClientSendCompleted(int httpRequestMessageHash, int httpResponseMessageHash, string responseString, int httpClientHash)
         {
-            const int SIZEDATA = 4;
+            const int SizeData = 4;
             fixed (char* arg1Ptr = responseString)
             {
-                EventData* dataDesc = stackalloc EventSource.EventData[SIZEDATA];
+                EventData* dataDesc = stackalloc EventSource.EventData[SizeData];
                 dataDesc[0].DataPointer = (IntPtr)(&httpRequestMessageHash);
                 dataDesc[0].Size = sizeof(int);
                 dataDesc[1].DataPointer = (IntPtr)(&httpResponseMessageHash);
@@ -143,15 +150,50 @@ namespace System.Net
                 dataDesc[3].DataPointer = (IntPtr)(&httpClientHash);
                 dataDesc[3].Size = sizeof(int);
 
-                WriteEventCore(CLIENT_SEND_COMPLETED, SIZEDATA, dataDesc);
+                WriteEventCore(ClientSendCompletedId, SizeData, dataDesc);
             }
         }
 
-        [Event(HEADERS_INVALID_VALUE_ID, Keywords = Keywords.Debug,
+        [Event(HeadersInvalidValueId, Keywords = Keywords.Debug,
             Level = EventLevel.Verbose)]
         internal void HeadersInvalidValue(string name, string rawValue)
         {
-            WriteEvent(HEADERS_INVALID_VALUE_ID, name, rawValue);
+            WriteEvent(HeadersInvalidValueId, name, rawValue);
+        }
+
+        [Event(HandlerMessageId, Keywords = Keywords.Debug, Level = EventLevel.Verbose)]
+        internal unsafe void HandlerMessage(int workerId, int requestId, string memberName, string message)
+        {
+            if (memberName == null)
+            {
+                memberName = string.Empty;
+            }
+
+            if (message == null)
+            {
+                message = string.Empty;
+            }
+
+            const int SizeData = 4;
+            fixed (char* memberNamePtr = memberName)
+            fixed (char* messagePtr = message)
+            {
+                EventData* dataDesc = stackalloc EventSource.EventData[SizeData];
+
+                dataDesc[0].DataPointer = (IntPtr)(&workerId);
+                dataDesc[0].Size = sizeof(int);
+
+                dataDesc[1].DataPointer = (IntPtr)(&requestId);
+                dataDesc[1].Size = sizeof(int);
+
+                dataDesc[2].DataPointer = (IntPtr)(memberNamePtr);
+                dataDesc[2].Size = (memberName.Length + 1) * sizeof(char);
+
+                dataDesc[3].DataPointer = (IntPtr)(messagePtr);
+                dataDesc[3].Size = (message.Length + 1) * sizeof(char);
+
+                WriteEventCore(HandlerMessageId, SizeData, dataDesc);
+            }
         }
 
         public class Keywords

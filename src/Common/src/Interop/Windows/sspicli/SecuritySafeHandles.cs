@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 
@@ -225,8 +226,7 @@ namespace System.Net.Security
             ref Interop.SspiCli.AuthIdentity authdata,
             out SafeFreeCredentials outCredential)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("SafeFreeCredentials::AcquireCredentialsHandle#1("
                                 + package + ", "
@@ -250,7 +250,7 @@ namespace System.Net.Security
                             ref outCredential._handle,
                             out timeStamp);
 #if TRACE_VERBOSE
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("Unmanaged::AcquireCredentialsHandle() returns 0x"
                                 + String.Format("{0:x}", errorCode)
@@ -271,8 +271,7 @@ namespace System.Net.Security
             Interop.SspiCli.CredentialUse intent,
             out SafeFreeCredentials outCredential)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("SafeFreeCredentials::AcquireDefaultCredential("
                                 + package + ", "
@@ -296,7 +295,7 @@ namespace System.Net.Security
                             out timeStamp);
 
 #if TRACE_VERBOSE
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("Unmanaged::AcquireCredentialsHandle() returns 0x"
                                 + errorCode.ToString("x")
@@ -347,8 +346,7 @@ namespace System.Net.Security
             ref Interop.SspiCli.SecureCredential authdata,
             out SafeFreeCredentials outCredential)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("SafeFreeCredentials::AcquireCredentialsHandle#2("
                                 + package + ", "
@@ -390,7 +388,7 @@ namespace System.Net.Security
             }
 
 #if TRACE_VERBOSE
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Print("Unmanaged::AcquireCredentialsHandle() returns 0x"
                                 + errorCode.ToString("x")
@@ -525,9 +523,8 @@ namespace System.Net.Security
             SecurityBuffer outSecBuffer,
             ref Interop.SspiCli.ContextFlags outFlags)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
 #if TRACE_VERBOSE
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Enter("SafeDeleteContext::InitializeSecurityContext");
                 GlobalLog.Print("    credential       = " + inCredentials.ToString());
@@ -547,21 +544,28 @@ namespace System.Net.Security
                 }
             }
 #endif
-            if (globalLogEnabled)
+            if (outSecBuffer == null)
             {
-                if (outSecBuffer == null)
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("SafeDeleteContext::InitializeSecurityContext()|outSecBuffer != null");
                 }
-                if (inSecBuffer != null && inSecBuffers != null)
+
+                Debug.Fail("SafeDeleteContext::InitializeSecurityContext()|outSecBuffer != null");
+            }
+            if (inSecBuffer != null && inSecBuffers != null)
+            {
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("SafeDeleteContext::InitializeSecurityContext()|inSecBuffer == null || inSecBuffers == null");
                 }
+
+                Debug.Fail("SafeDeleteContext::InitializeSecurityContext()|inSecBuffer == null || inSecBuffers == null");
             }
 
             if (inCredentials == null)
             {
-                throw new ArgumentNullException("inCredentials");
+                throw new ArgumentNullException(nameof(inCredentials));
             }
 
             Interop.SspiCli.SecurityBufferDescriptor inSecurityBufferDescriptor = null;
@@ -629,7 +633,7 @@ namespace System.Net.Security
                                     inUnmanagedBuffer[index].token = Marshal.UnsafeAddrOfPinnedArrayElement(securityBuffer.token, securityBuffer.offset);
                                 }
 #if TRACE_VERBOSE
-                                if (globalLogEnabled)
+                                if (GlobalLog.IsEnabled)
                                 {
                                     GlobalLog.Print("SecBuffer: cbBuffer:" + securityBuffer.size + " BufferType:" + securityBuffer.type);
                                 }
@@ -684,7 +688,7 @@ namespace System.Net.Security
                                             outFreeContextBuffer);
                         }
 
-                        if (globalLogEnabled)
+                        if (GlobalLog.IsEnabled)
                         {
                             GlobalLog.Print("SafeDeleteContext:InitializeSecurityContext  Marshalling OUT buffer");
                         }
@@ -727,7 +731,7 @@ namespace System.Net.Security
                 }
             }
 
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Leave("SafeDeleteContext::InitializeSecurityContext() unmanaged InitializeSecurityContext()", "errorCode:0x" + errorCode.ToString("x8") + " refContext:" + LoggingHash.ObjectToString(refContext));
             }
@@ -833,9 +837,8 @@ namespace System.Net.Security
             SecurityBuffer outSecBuffer,
             ref Interop.SspiCli.ContextFlags outFlags)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
 #if TRACE_VERBOSE
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Enter("SafeDeleteContext::AcceptSecurityContex");
                 GlobalLog.Print("    credential       = " + inCredentials.ToString());
@@ -853,21 +856,28 @@ namespace System.Net.Security
                 }
             }
 #endif
-            if (globalLogEnabled)
+            if (outSecBuffer == null)
             {
-                if (outSecBuffer == null)
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("SafeDeleteContext::AcceptSecurityContext()|outSecBuffer != null");
                 }
-                if (inSecBuffer != null && inSecBuffers != null)
+
+                Debug.Fail("SafeDeleteContext::AcceptSecurityContext()|outSecBuffer != null");
+            }
+            if (inSecBuffer != null && inSecBuffers != null)
+            {
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("SafeDeleteContext::AcceptSecurityContext()|inSecBuffer == null || inSecBuffers == null");
                 }
+
+                Debug.Fail("SafeDeleteContext::AcceptSecurityContext()|outSecBuffer != null");
             }
 
             if (inCredentials == null)
             {
-                throw new ArgumentNullException("inCredentials");
+                throw new ArgumentNullException(nameof(inCredentials));
             }
 
             Interop.SspiCli.SecurityBufferDescriptor inSecurityBufferDescriptor = null;
@@ -935,7 +945,7 @@ namespace System.Net.Security
                                     inUnmanagedBuffer[index].token = Marshal.UnsafeAddrOfPinnedArrayElement(securityBuffer.token, securityBuffer.offset);
                                 }
 #if TRACE_VERBOSE
-                                if (globalLogEnabled)
+                                if (GlobalLog.IsEnabled)
                                 {
                                     GlobalLog.Print("SecBuffer: cbBuffer:" + securityBuffer.size + " BufferType:" + securityBuffer.type);
                                 }
@@ -983,7 +993,7 @@ namespace System.Net.Security
                                         ref outFlags,
                                         outFreeContextBuffer);
 
-                        if (globalLogEnabled)
+                        if (GlobalLog.IsEnabled)
                         {
                             GlobalLog.Print("SafeDeleteContext:AcceptSecurityContext  Marshalling OUT buffer");
                         }
@@ -1027,7 +1037,7 @@ namespace System.Net.Security
                 }
             }
 
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Leave("SafeDeleteContext::AcceptSecurityContex() unmanaged AcceptSecurityContex()", "errorCode:0x" + errorCode.ToString("x8") + " refContext:" + LoggingHash.ObjectToString(refContext));
             }
@@ -1123,18 +1133,22 @@ namespace System.Net.Security
             ref SafeDeleteContext refContext,
             SecurityBuffer[] inSecBuffers)
         {
-            bool globalLogEnabled = GlobalLog.IsEnabled;
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Enter("SafeDeleteContext::CompleteAuthToken");
                 GlobalLog.Print("    refContext       = " + LoggingHash.ObjectToString(refContext));
 #if TRACE_VERBOSE
                 GlobalLog.Print("    inSecBuffers[]   = length:" + inSecBuffers.Length);
 #endif
-                if (inSecBuffers == null)
+            }
+            if (inSecBuffers == null)
+            {
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("SafeDeleteContext::CompleteAuthToken()|inSecBuffers == null");
                 }
+
+                Debug.Fail("SafeDeleteContext::CompleteAuthToken()|inSecBuffers == null");
             }
 
             var inSecurityBufferDescriptor = new Interop.SspiCli.SecurityBufferDescriptor(inSecBuffers.Length);
@@ -1174,7 +1188,7 @@ namespace System.Net.Security
                             inUnmanagedBuffer[index].token = Marshal.UnsafeAddrOfPinnedArrayElement(securityBuffer.token, securityBuffer.offset);
                         }
 #if TRACE_VERBOSE
-                        if (globalLogEnabled)
+                        if (GlobalLog.IsEnabled)
                         {
                             GlobalLog.Print("SecBuffer: cbBuffer:" + securityBuffer.size + " BufferType:" + securityBuffer.type);
                         }
@@ -1220,7 +1234,7 @@ namespace System.Net.Security
                 }
             }
 
-            if (globalLogEnabled)
+            if (GlobalLog.IsEnabled)
             {
                 GlobalLog.Leave("SafeDeleteContext::CompleteAuthToken() unmanaged CompleteAuthToken()", "errorCode:0x" + errorCode.ToString("x8") + " refContext:" + LoggingHash.ObjectToString(refContext));
             }

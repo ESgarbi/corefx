@@ -1,12 +1,18 @@
 {
   "dependencies": {
-    "System.Console": "4.0.0-rc2-23616",
-    "System.IO": "4.0.10",
-    "System.Reflection": "4.0.0",
-    "System.Runtime": "4.0.20",
-    "System.Threading.Tasks": "4.0.10"
+    "System.Runtime": "4.1.1-beta-24413-01",
+    "Microsoft.NETCore.Platforms": "1.0.2-beta-24413-01",
+    "System.Console": "4.0.0",
+    "System.Diagnostics.Process": "4.1.1-beta-24413-01",
+    "System.IO": "4.1.1-beta-24413-01",
+    "System.Reflection": "4.1.1-beta-24413-01",
+    "System.Threading.Tasks": "4.0.12-beta-24413-01",
+    "test-runtime": {
+      "target": "project",
+      "exclude": "compile"
+    }
   },
   "frameworks": {
-    "dnxcore50": {}
+    "netstandard1.3": {}
   }
 }

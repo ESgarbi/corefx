@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 
@@ -50,9 +51,9 @@ namespace Windows.Foundation
                     double height)
         {
             if (width < 0)
-                throw new ArgumentException("width");
+                throw new ArgumentOutOfRangeException(nameof(width), SR.ArgumentOutOfRange_NeedNonNegNum);
             if (height < 0)
-                throw new ArgumentException("height");
+                throw new ArgumentOutOfRangeException(nameof(height), SR.ArgumentOutOfRange_NeedNonNegNum);
 
             _x = (float)x;
             _y = (float)y;
@@ -119,7 +120,7 @@ namespace Windows.Foundation
             set
             {
                 if (value < 0)
-                    throw new ArgumentException("Width");
+                    throw new ArgumentOutOfRangeException(nameof(Width), SR.ArgumentOutOfRange_NeedNonNegNum);
 
                 _width = (float)value;
             }
@@ -131,7 +132,7 @@ namespace Windows.Foundation
             set
             {
                 if (value < 0)
-                    throw new ArgumentException("Height");
+                    throw new ArgumentOutOfRangeException(nameof(Height), SR.ArgumentOutOfRange_NeedNonNegNum);
 
                 _height = (float)value;
             }
@@ -346,13 +347,7 @@ namespace Windows.Foundation
 
         public override bool Equals(object o)
         {
-            if ((null == o) || !(o is Rect))
-            {
-                return false;
-            }
-
-            Rect value = (Rect)o;
-            return (this == value);
+            return o is Rect && this == (Rect)o;
         }
 
         public override int GetHashCode()

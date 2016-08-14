@@ -1,7 +1,7 @@
-﻿// Copyright (c) Jon Hanna. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using Xunit;
 
@@ -10,8 +10,8 @@ namespace System.Linq.Expressions.Tests
     public class Goto : GotoExpressionTests
     {
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void JustGotoValue(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void JustGotoValue(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             LabelTarget target = Expression.Label(type);
@@ -20,11 +20,12 @@ namespace System.Linq.Expressions.Tests
                 Expression.Label(target, Expression.Default(type))
                 );
             Expression equals = Expression.Equal(Expression.Constant(value), block);
-            Assert.True(Expression.Lambda<Func<bool>>(equals).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equals).Compile(useInterpreter)());
         }
 
-        [Fact]
-        public void GotoToMiddle()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public void GotoToMiddle(bool useInterpreter)
         {
             // The behaviour is that return jumps to a label, but does not necessarily leave a block.
             LabelTarget target = Expression.Label(typeof(int));
@@ -33,12 +34,12 @@ namespace System.Linq.Expressions.Tests
                 Expression.Label(target, Expression.Constant(2)),
                 Expression.Constant(3)
                 );
-            Assert.Equal(3, Expression.Lambda<Func<int>>(block).Compile()());
+            Assert.Equal(3, Expression.Lambda<Func<int>>(block).Compile(useInterpreter)());
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void GotoJumps(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void GotoJumps(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             LabelTarget target = Expression.Label(type);
@@ -47,27 +48,28 @@ namespace System.Linq.Expressions.Tests
                 Expression.Throw(Expression.Constant(new InvalidOperationException())),
                 Expression.Label(target, Expression.Default(type))
                 );
-            Assert.True(Expression.Lambda<Func<bool>>(Expression.Equal(Expression.Constant(value), block)).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(Expression.Equal(Expression.Constant(value), block)).Compile(useInterpreter)());
         }
 
         [Theory]
-        [MemberData("TypesData")]
+        [MemberData(nameof(TypesData))]
         public void NonVoidTargetGotoHasNoValue(Type type)
         {
             LabelTarget target = Expression.Label(type);
-            Assert.Throws<ArgumentException>(() => Expression.Goto(target));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(target));
         }
 
         [Theory]
-        [MemberData("TypesData")]
+        [MemberData(nameof(TypesData))]
         public void NonVoidTargetGotoHasNoValueTypeExplicit(Type type)
         {
             LabelTarget target = Expression.Label(type);
-            Assert.Throws<ArgumentException>(() => Expression.Goto(target, type));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(target, type));
         }
 
-        [Fact]
-        public void GotoVoidNoValue()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public void GotoVoidNoValue(bool useInterpreter)
         {
             LabelTarget target = Expression.Label();
             Expression block = Expression.Block(
@@ -75,11 +77,12 @@ namespace System.Linq.Expressions.Tests
                 Expression.Throw(Expression.Constant(new InvalidOperationException())),
                 Expression.Label(target)
                 );
-            Expression.Lambda<Action>(block).Compile()();
+            Expression.Lambda<Action>(block).Compile(useInterpreter)();
         }
 
-        [Fact]
-        public void GotoExplicitVoidNoValue()
+        [Theory]
+        [ClassData(typeof(CompilationTypes))]
+        public void GotoExplicitVoidNoValue(bool useInterpreter)
         {
             LabelTarget target = Expression.Label();
             Expression block = Expression.Block(
@@ -87,23 +90,23 @@ namespace System.Linq.Expressions.Tests
                 Expression.Throw(Expression.Constant(new InvalidOperationException())),
                 Expression.Label(target)
                 );
-            Expression.Lambda<Action>(block).Compile()();
+            Expression.Lambda<Action>(block).Compile(useInterpreter)();
         }
 
         [Theory]
-        [MemberData("TypesData")]
+        [MemberData(nameof(TypesData))]
         public void NullValueOnNonVoidGoto(Type type)
         {
-            Assert.Throws<ArgumentException>(() => Expression.Goto(Expression.Label(type)));
-            Assert.Throws<ArgumentException>(() => Expression.Goto(Expression.Label(type), default(Expression)));
-            Assert.Throws<ArgumentException>(() => Expression.Goto(Expression.Label(type), null, type));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(Expression.Label(type)));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(Expression.Label(type), default(Expression)));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(Expression.Label(type), null, type));
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
+        [MemberData(nameof(ConstantValueData))]
         public void ExplicitNullTypeWithValue(object value)
         {
-            Assert.Throws<ArgumentException>(() => Expression.Goto(Expression.Label(value.GetType()), default(Type)));
+            Assert.Throws<ArgumentException>("target", () => Expression.Goto(Expression.Label(value.GetType()), default(Type)));
         }
 
         [Fact]
@@ -116,8 +119,8 @@ namespace System.Linq.Expressions.Tests
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void CanAssignAnythingToVoid(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void CanAssignAnythingToVoid(object value, bool useInterpreter)
         {
             LabelTarget target = Expression.Label();
             BlockExpression block = Expression.Block(
@@ -125,19 +128,19 @@ namespace System.Linq.Expressions.Tests
                 Expression.Label(target)
                 );
             Assert.Equal(typeof(void), block.Type);
-            Expression.Lambda<Action>(block).Compile()();
+            Expression.Lambda<Action>(block).Compile(useInterpreter)();
         }
 
         [Theory]
-        [MemberData("NonObjectAssignableConstantValueData")]
+        [MemberData(nameof(NonObjectAssignableConstantValueData))]
         public void CannotAssignValueTypesToObject(object value)
         {
-            Assert.Throws<ArgumentException>(() => Expression.Goto(Expression.Label(typeof(object)), Expression.Constant(value)));
+            Assert.Throws<ArgumentException>(null, () => Expression.Goto(Expression.Label(typeof(object)), Expression.Constant(value)));
         }
 
         [Theory]
-        [MemberData("ObjectAssignableConstantValueData")]
-        public void ExplicitTypeAssigned(object value)
+        [PerCompilationType(nameof(ObjectAssignableConstantValueData))]
+        public void ExplicitTypeAssigned(object value, bool useInterpreter)
         {
             LabelTarget target = Expression.Label(typeof(object));
             BlockExpression block = Expression.Block(
@@ -145,7 +148,7 @@ namespace System.Linq.Expressions.Tests
                 Expression.Label(target, Expression.Default(typeof(object)))
                 );
             Assert.Equal(typeof(object), block.Type);
-            Assert.Equal(value, Expression.Lambda<Func<object>>(block).Compile()());
+            Assert.Equal(value, Expression.Lambda<Func<object>>(block).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -166,6 +169,7 @@ namespace System.Linq.Expressions.Tests
             Expression value = Expression.Constant(0);
             GotoExpression ret = Expression.Goto(target, value);
             Assert.Same(ret, ret.Update(target, value));
+            Assert.Same(ret, NoOpVisitor.Instance.Visit(ret));
         }
 
         [Fact]
@@ -182,6 +186,31 @@ namespace System.Linq.Expressions.Tests
             Expression value = Expression.Constant(0);
             GotoExpression ret = Expression.Goto(Expression.Label(typeof(int)), value);
             Assert.NotSame(ret, ret.Update(Expression.Label(typeof(int)), value));
+        }
+
+        [Fact]
+        public void OpenGenericType()
+        {
+            Assert.Throws<ArgumentException>("type", () => Expression.Goto(Expression.Label(typeof(void)), typeof(List<>)));
+        }
+
+        [Fact]
+        public static void TypeContainsGenericParameters()
+        {
+            Assert.Throws<ArgumentException>("type", () => Expression.Goto(Expression.Label(typeof(void)), typeof(List<>.Enumerator)));
+            Assert.Throws<ArgumentException>("type", () => Expression.Goto(Expression.Label(typeof(void)), typeof(List<>).MakeGenericType(typeof(List<>))));
+        }
+
+        [Fact]
+        public void PointerType()
+        {
+            Assert.Throws<ArgumentException>("type", () => Expression.Goto(Expression.Label(typeof(void)), typeof(int).MakePointerType()));
+        }
+
+        [Fact]
+        public void ByRefType()
+        {
+            Assert.Throws<ArgumentException>("type", () => Expression.Goto(Expression.Label(typeof(void)), typeof(int).MakeByRefType()));
         }
     }
 }

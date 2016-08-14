@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // This RegexParser class is internal to the Regex package.
 // It builds a tree of RegexNodes from a regular expression
@@ -34,7 +35,7 @@ namespace System.Text.RegularExpressions
         internal int _capsize;
 
         internal Dictionary<Int32, Int32> _caps;
-        internal Dictionary<String, Int32> _capnames;
+        internal Dictionary<string, int> _capnames;
 
         internal Int32[] _capnumlist;
         internal List<String> _capnamelist;
@@ -80,7 +81,7 @@ namespace System.Text.RegularExpressions
          * This static call constructs a flat concatenation node given
          * a replacement pattern.
          */
-        internal static RegexReplacement ParseReplacement(String rep, Dictionary<Int32, Int32> caps, int capsize, Dictionary<String, Int32> capnames, RegexOptions op)
+        internal static RegexReplacement ParseReplacement(String rep, Dictionary<Int32, Int32> caps, int capsize, Dictionary<string, int> capnames, RegexOptions op)
         {
             RegexParser p;
             RegexNode root;
@@ -1417,7 +1418,7 @@ namespace System.Text.RegularExpressions
         }
 
         /*
-         * Grabs and converts an ascii control character
+         * Grabs and converts an ASCII control character
          */
         internal char ScanControl()
         {
@@ -1486,7 +1487,7 @@ namespace System.Text.RegularExpressions
         }
 
         /*
-         * Scans \ code for escape codes that map to single unicode chars.
+         * Scans \ code for escape codes that map to single Unicode chars.
          */
         internal char ScanCharEscape()
         {
@@ -1764,7 +1765,7 @@ namespace System.Text.RegularExpressions
         {
             if (_capnames == null)
             {
-                _capnames = new Dictionary<String, Int32>();
+                _capnames = new Dictionary<string, int>();
                 _capnamelist = new List<String>();
             }
 
@@ -1778,7 +1779,7 @@ namespace System.Text.RegularExpressions
         /*
          * For when all the used captures are known: note them all at once
          */
-        internal void NoteCaptures(Dictionary<Int32, Int32> caps, int capsize, Dictionary<String, Int32> capnames)
+        internal void NoteCaptures(Dictionary<Int32, Int32> caps, int capsize, Dictionary<string, int> capnames)
         {
             _caps = caps;
             _capsize = capsize;
@@ -1831,7 +1832,7 @@ namespace System.Text.RegularExpressions
                 if (_capnames == null)
                 {
                     oldcapnamelist = null;
-                    _capnames = new Dictionary<String, Int32>();
+                    _capnames = new Dictionary<string, int>();
                     _capnamelist = new List<String>();
                     next = -1;
                 }
@@ -1946,7 +1947,7 @@ namespace System.Text.RegularExpressions
         internal const byte E = 1;    // should be escaped
 
         /*
-         * For categorizing ascii characters.
+         * For categorizing ASCII characters.
         */
         internal static readonly byte[] _category = new byte[] {
             // 0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F

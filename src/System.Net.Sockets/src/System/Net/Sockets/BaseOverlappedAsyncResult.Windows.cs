@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -91,13 +92,16 @@ namespace System.Net.Sockets
 
                 object returnObject = null;
 
-                if (GlobalLog.IsEnabled)
+                if (asyncResult.InternalPeekCompleted)
                 {
-                    if (asyncResult.InternalPeekCompleted)
+                    if (GlobalLog.IsEnabled)
                     {
                         GlobalLog.AssertFormat("BaseOverlappedAsyncResult#{0}::CompletionPortCallback()|asyncResult.IsCompleted", LoggingHash.HashString(asyncResult));
-                    }
-
+                    }                
+                    Debug.Fail("BaseOverlappedAsyncResult#" + LoggingHash.HashString(asyncResult) + "::CompletionPortCallback()|asyncResult.IsCompleted");
+                }
+                if (GlobalLog.IsEnabled)
+                {
                     GlobalLog.Print(
                         "BaseOverlappedAsyncResult#" + LoggingHash.HashString(asyncResult) + "::CompletionPortCallback" +
                         " errorCode:" + errorCode.ToString() +
@@ -141,15 +145,23 @@ namespace System.Net.Sockets
                             if (!success)
                             {
                                 socketError = (SocketError)Marshal.GetLastWin32Error();
-                                if (socketError == 0 && GlobalLog.IsEnabled)
+                                if (socketError == 0)
                                 {
-                                    GlobalLog.AssertFormat("BaseOverlappedAsyncResult#{0}::CompletionPortCallback()|socketError:0 numBytes:{1}", LoggingHash.HashString(asyncResult), numBytes);
+                                    if (GlobalLog.IsEnabled)
+                                    {
+                                        GlobalLog.AssertFormat("BaseOverlappedAsyncResult#{0}::CompletionPortCallback()|socketError:0 numBytes:{1}", LoggingHash.HashString(asyncResult), numBytes);
+                                    }
+                                    Debug.Fail("BaseOverlappedAsyncResult#" + LoggingHash.HashString(asyncResult) + "::CompletionPortCallback()|socketError:0 numBytes:" + numBytes);
                                 }
                             }
 
-                            if (success && GlobalLog.IsEnabled)
+                            if (success)
                             {
-                                GlobalLog.AssertFormat("BaseOverlappedAsyncResult#{0}::CompletionPortCallback()|Unexpectedly succeeded. errorCode:{1} numBytes:{2}", LoggingHash.HashString(asyncResult), errorCode, numBytes);
+                                if (GlobalLog.IsEnabled)
+                                {
+                                    GlobalLog.AssertFormat("BaseOverlappedAsyncResult#{0}::CompletionPortCallback()|Unexpectedly succeeded. errorCode:{1} numBytes:{2}", LoggingHash.HashString(asyncResult), errorCode, numBytes);
+                                }
+                                Debug.Fail("BaseOverlappedAsyncResult#" + LoggingHash.HashString(asyncResult) + "::CompletionPortCallback()|Unexpectedly succeeded. errorCode:" + errorCode + " numBytes: " + numBytes);
                             }
                         }
                         catch (ObjectDisposedException)
@@ -201,7 +213,7 @@ namespace System.Net.Sockets
         }
 
         // Utility cleanup routine. Frees the overlapped structure.
-        // This should be overriden to free pinned and unmanaged memory in the subclass.
+        // This should be overridden to free pinned and unmanaged memory in the subclass.
         // It needs to also be invoked from the subclass.
         protected virtual void ForceReleaseUnmanagedStructures()
         {

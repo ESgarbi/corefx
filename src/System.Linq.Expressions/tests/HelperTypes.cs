@@ -1,14 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Tests.ExpressionCompiler;
 
-namespace Tests.ExpressionCompiler
+namespace System.Linq.Expressions.Tests
 {
     public interface I
     {
@@ -75,7 +72,10 @@ namespace Tests.ExpressionCompiler
     public enum E
     {
         A = 1,
-        B = 2
+        B = 2,
+        Red = 0,
+        Green,
+        Blue
     }
 
     public enum El : long
@@ -83,6 +83,13 @@ namespace Tests.ExpressionCompiler
         A,
         B,
         C
+    }
+
+    public enum Eu : uint
+    {
+        Foo,
+        Bar,
+        Baz
     }
 
     public struct S : IEquatable<S>
@@ -233,5 +240,31 @@ namespace Tests.ExpressionCompiler
     {
         public int II { get; set; }
         public static int SI { get; set; }
+    }
+
+    internal class CompilationTypes : IEnumerable<object[]>
+    {
+        private static readonly object[] False = new object[] { false };
+        private static readonly object[] True = new object[] { true };
+
+        public IEnumerator<object[]> GetEnumerator()
+        {
+            yield return False;
+            yield return True;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
+    internal class NoOpVisitor : ExpressionVisitor
+    {
+        internal static readonly NoOpVisitor Instance = new NoOpVisitor();
+
+        private NoOpVisitor()
+        {
+        }
     }
 }

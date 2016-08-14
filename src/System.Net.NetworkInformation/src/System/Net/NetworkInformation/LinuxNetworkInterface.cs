@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +14,7 @@ namespace System.Net.NetworkInformation
     internal class LinuxNetworkInterface : UnixNetworkInterface
     {
         private readonly OperationalStatus _operationalStatus;
-        private readonly bool _supportsMulticast;
+        private readonly bool? _supportsMulticast;
         private readonly long? _speed;
         private readonly LinuxIPInterfaceProperties _ipProperties;
 
@@ -67,15 +68,39 @@ namespace System.Net.NetworkInformation
             return lni;
         }
 
-        public override bool SupportsMulticast { get { return _supportsMulticast; } }
+        public override bool SupportsMulticast
+        {
+            get
+            {
+                if (_supportsMulticast.HasValue)
+                {
+                    return _supportsMulticast.Value;
+                }
+                else
+                {
+                    throw new PlatformNotSupportedException(SR.net_InformationUnavailableOnPlatform);
+                }
+            }
+        }
 
-        private static bool GetSupportsMulticast(string name)
+        private static bool? GetSupportsMulticast(string name)
         {
             // /sys/class/net/<interface_name>/flags
             string path = Path.Combine(NetworkFiles.SysClassNetFolder, name, NetworkFiles.FlagsFileName);
-            Interop.LinuxNetDeviceFlags flags = (Interop.LinuxNetDeviceFlags)StringParsingHelpers.ParseRawHexFileAsInt(path);
 
-            return (flags & Interop.LinuxNetDeviceFlags.IFF_MULTICAST) == Interop.LinuxNetDeviceFlags.IFF_MULTICAST;
+            if (File.Exists(path))
+            {
+                try
+                {
+                    Interop.LinuxNetDeviceFlags flags = (Interop.LinuxNetDeviceFlags)StringParsingHelpers.ParseRawHexFileAsInt(path);
+                    return (flags & Interop.LinuxNetDeviceFlags.IFF_MULTICAST) == Interop.LinuxNetDeviceFlags.IFF_MULTICAST;
+                }
+                catch (FileNotFoundException)
+                {
+                }
+            }
+
+            return null;
         }
 
         public override IPInterfaceProperties GetIPProperties()
@@ -89,10 +114,6 @@ namespace System.Net.NetworkInformation
         }
 
         public override OperationalStatus OperationalStatus { get { return _operationalStatus; } }
-
-        public override string Id { get { throw new PlatformNotSupportedException(SR.net_InformationUnavailableOnPlatform); } }
-
-        public override string Description { get { throw new PlatformNotSupportedException(SR.net_InformationUnavailableOnPlatform); } }
 
         public override long Speed
         {
@@ -128,20 +149,43 @@ namespace System.Net.NetworkInformation
         {
             // /sys/class/net/<name>/operstate
             string path = Path.Combine(NetworkFiles.SysClassNetFolder, name, NetworkFiles.OperstateFileName);
-            string state = File.ReadAllText(path).Trim();
-            return MapState(state);
+            if (File.Exists(path))
+            {
+                try
+                {
+                    string state = File.ReadAllText(path).Trim();
+                    return MapState(state);
+                }
+                catch (FileNotFoundException)
+                {
+                }
+            }
+
+            return OperationalStatus.Unknown;
         }
 
         // Maps values from /sys/class/net/<interface>/operstate to OperationStatus values.
         private static OperationalStatus MapState(string state)
         {
-            // TODO: Figure out the possible values that Linux might return.
+            //
+            // http://users.sosdg.org/~qiyong/lxr/source/Documentation/networking/operstates.txt?a=um#L41
+            //
             switch (state)
             {
-                case "up":
-                    return OperationalStatus.Up;
+                case "unknown":
+                    return OperationalStatus.Unknown;
+                case "notpresent":
+                    return OperationalStatus.NotPresent;
                 case "down":
                     return OperationalStatus.Down;
+                case "lowerlayerdown":
+                    return OperationalStatus.LowerLayerDown;
+                case "testing":
+                    return OperationalStatus.Testing;
+                case "dormant":
+                    return OperationalStatus.Dormant;
+                case "up":
+                    return OperationalStatus.Up;
                 default:
                     return OperationalStatus.Unknown;
             }

@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -37,18 +38,19 @@ namespace BasicEventSourceTests
         /// Tests the EventSource.Write[T] method (can only use the self-describing mechanism).  
         /// Tests the EventListener code path
         /// </summary>
-        [ActiveIssue(4871, PlatformID.AnyUnix)]
         [Fact]
         public void Test_Write_T_EventListener()
         {
-            Test_Write_T(new EventListenerListener());
+            using (var listener = new EventListenerListener())
+            {
+                Test_Write_T(listener);
+            }
         }
 
         /// <summary>
         /// Tests the EventSource.Write[T] method (can only use the self-describing mechanism).  
         /// Tests the EventListener code path using events instead of virtual callbacks.
         /// </summary>
-        [ActiveIssue(4871, PlatformID.AnyUnix)]
         [Fact]
         public void Test_Write_T_EventListener_UseEvents()
         {
@@ -63,7 +65,10 @@ namespace BasicEventSourceTests
         [Fact]
         public void Test_Write_T_ETW()
         {
-            Test_Write_T(new EtwListener());
+            using (var listener = new EtwListener())
+            {
+                Test_Write_T(listener);
+            }
         }
 #endif //USE_ETW
         /// <summary>
@@ -219,7 +224,6 @@ namespace BasicEventSourceTests
                 var dictInt = new Dictionary<string, int>() { { "elem1", 10 }, { "elem2", 20 } };
 
                 /*************************************************************************/
-#if false   // TODO: enable when dictionary events are working again. GitHub issue #4867.
                 tests.Add(new SubTest("Write/Dict/EventWithStringDict_C",
                     delegate()
                     {
@@ -298,7 +302,6 @@ namespace BasicEventSourceTests
 
                         Assert.Equal(evt.PayloadValue(2, "s"), "end");
                     }));
-#endif // false
                 /*************************************************************************/
                 /**************************** Empty Event TESTING ************************/
                 /*************************************************************************/
@@ -403,39 +406,46 @@ namespace BasicEventSourceTests
         /// Declare SelfDescribingSerialization.  In that case THOSE
         /// events MUST use SelfDescribing serialization.  
         /// </summary>
-        [ActiveIssue(4871, PlatformID.AnyUnix)]
         [Fact]
         public void Test_Write_T_In_Manifest_Serialization()
         {
-            var listenerGenerators = new Func<Listener>[]
-        {
-#if USE_ETW // TODO: Enable when TraceEvent is available on CoreCLR. GitHub issue #4864.
-                () => new EtwListener(),
-#endif // USE_ETW
-                () => new EventListenerListener()
-        };
-
-            foreach (Func<Listener> listenerGenerator in listenerGenerators)
+            using (var eventListener = new EventListenerListener())
             {
-                var events = new List<Event>();
-                using (var listener = listenerGenerator())
+#if USE_ETW // TODO: Enable when TraceEvent is available on CoreCLR. GitHub issue #4864.
+                using (var etwListener = new EtwListener())
+#endif
                 {
-                    Debug.WriteLine("Testing Listener " + listener);
-                    // Create an eventSource with manifest based serialization
-                    using (var logger = new SdtEventSources.EventSourceTest())
+                    var listenerGenerators = new Func<Listener>[]
                     {
-                        listener.OnEvent = delegate (Event data) { events.Add(data); };
-                        listener.EventSourceSynchronousEnable(logger);
+                        () => eventListener,
+#if USE_ETW // TODO: Enable when TraceEvent is available on CoreCLR. GitHub issue #4864.
+                        () => etwListener
+#endif // USE_ETW
+                    };
 
-                        // Use the Write<T> API.   This is OK
-                        logger.Write("MyTestEvent", new { arg1 = 3, arg2 = "hi" });
+                    foreach (Func<Listener> listenerGenerator in listenerGenerators)
+                    {
+                        var events = new List<Event>();
+                        using (var listener = listenerGenerator())
+                        {
+                            Debug.WriteLine("Testing Listener " + listener);
+                            // Create an eventSource with manifest based serialization
+                            using (var logger = new SdtEventSources.EventSourceTest())
+                            {
+                                listener.OnEvent = delegate (Event data) { events.Add(data); };
+                                listener.EventSourceSynchronousEnable(logger);
+
+                                // Use the Write<T> API.   This is OK
+                                logger.Write("MyTestEvent", new { arg1 = 3, arg2 = "hi" });
+                            }
+                        }
+                        Assert.Equal(events.Count, 1);
+                        Event _event = events[0];
+                        Assert.Equal("MyTestEvent", _event.EventName);
+                        Assert.Equal(3, (int)_event.PayloadValue(0, "arg1"));
+                        Assert.Equal("hi", (string)_event.PayloadValue(1, "arg2"));
                     }
                 }
-                Assert.Equal(events.Count, 1);
-                Event _event = events[0];
-                Assert.Equal("MyTestEvent", _event.EventName);
-                Assert.Equal(3, (int)_event.PayloadValue(0, "arg1"));
-                Assert.Equal("hi", (string)_event.PayloadValue(1, "arg2"));
             }
         }
 

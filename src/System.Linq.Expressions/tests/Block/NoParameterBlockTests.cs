@@ -1,18 +1,19 @@
-﻿// Copyright (c) Jon Hanna. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using Xunit;
 
-namespace System.Linq.Expressions.Test
+namespace System.Linq.Expressions.Tests
 {
     public class NoParameterBlockTests : SharedBlockTests
     {
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void SingleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void SingleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -23,12 +24,12 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void DoubleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void DoubleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -40,7 +41,7 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -58,8 +59,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void TripleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void TripleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -72,7 +73,7 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -92,8 +93,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void QuadrupleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void QuadrupleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -107,7 +108,7 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -129,8 +130,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void QuintupleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void QuintupleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -145,7 +146,7 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -169,8 +170,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValueData")]
-        public void SextupleElementBlock(object value)
+        [PerCompilationType(nameof(ConstantValueData))]
+        public void SextupleElementBlock(object value, bool useInterpreter)
         {
             Type type = value.GetType();
             ConstantExpression constant = Expression.Constant(value, type);
@@ -186,7 +187,7 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(type, block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Fact]
@@ -204,9 +205,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("BlockSizes")]
-        [ActiveIssue(3909)]
-        [ActiveIssue(3908)]
+        [MemberData(nameof(BlockSizes))]
         public void NullExpressionInExpressionList(int size)
         {
             List<Expression> expressionList = Enumerable.Range(0, size).Select(i => (Expression)Expression.Constant(1)).ToList();
@@ -224,26 +223,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("BlockSizes")]
-        public void NullExpressionInExpressionListTemp(int size)
-        {
-            List<Expression> expressionList = Enumerable.Range(0, size).Select(i => (Expression)Expression.Constant(1)).ToList();
-            for (int i = 0; i != expressionList.Count; ++i)
-            {
-                Expression[] expressions = expressionList.ToArray();
-                expressions[i] = null;
-                Assert.Throws<ArgumentNullException>(() => Expression.Block(expressions));
-                Assert.Throws<ArgumentNullException>(() => Expression.Block(expressions.Skip(0)));
-                Assert.ThrowsAny<Exception>(() => Expression.Block(typeof(int), expressions));
-                Assert.ThrowsAny<Exception>(() => Expression.Block(typeof(int), expressions.Skip(0)));
-                Assert.ThrowsAny<Exception>(() => Expression.Block(typeof(int), null, expressions));
-                Assert.ThrowsAny<Exception>(() => Expression.Block(typeof(int), null, expressions.Skip(0)));
-            }
-        }
-
-        [Theory]
-        [MemberData("BlockSizes")]
-        [ActiveIssue(3909)]
+        [MemberData(nameof(BlockSizes))]
         public void UnreadableExpressionInExpressionList(int size)
         {
             List<Expression> expressionList = Enumerable.Range(0, size).Select(i => (Expression)Expression.Constant(1)).ToList();
@@ -261,26 +241,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("BlockSizes")]
-        public void UnreadableExpressionInExpressionListTemp(int size)
-        {
-            List<Expression> expressionList = Enumerable.Range(0, size).Select(i => (Expression)Expression.Constant(1)).ToList();
-            for (int i = 0; i != expressionList.Count; ++i)
-            {
-                Expression[] expressions = expressionList.ToArray();
-                expressions[i] = UnreadableExpression;
-                Assert.Throws<ArgumentException>(() => Expression.Block(expressions));
-                Assert.Throws<ArgumentException>(() => Expression.Block(expressions.Skip(0)));
-                Assert.Throws<ArgumentException>(() => Expression.Block(typeof(int), expressions));
-                Assert.Throws<ArgumentException>(() => Expression.Block(typeof(int), expressions.Skip(0)));
-                Assert.Throws<ArgumentException>(() => Expression.Block(typeof(int), null, expressions));
-                Assert.Throws<ArgumentException>(() => Expression.Block(typeof(int), null, expressions.Skip(0)));
-            }
-        }
-
-        [Theory]
-        [MemberData("ObjectAssignableConstantValuesAndSizes")]
-        public void BlockExplicitType(object value, int blockSize)
+        [PerCompilationType(nameof(ObjectAssignableConstantValuesAndSizes))]
+        public void BlockExplicitType(object value, int blockSize, bool useInterpreter)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
             BlockExpression block = Expression.Block(typeof(object), PadBlock(blockSize - 1, constant));
@@ -288,78 +250,37 @@ namespace System.Linq.Expressions.Test
             Assert.Equal(typeof(object), block.Type);
 
             Expression equal = Expression.Equal(constant, block);
-            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile()());
+            Assert.True(Expression.Lambda<Func<bool>>(equal).Compile(useInterpreter)());
         }
 
         [Theory]
-        [MemberData("BlockSizes")]
+        [MemberData(nameof(BlockSizes))]
         public void BlockInvalidExplicitType(int blockSize)
         {
             ConstantExpression constant = Expression.Constant(0);
             IEnumerable<Expression> expressions = PadBlock(blockSize - 1, Expression.Constant(0));
-            Assert.Throws<ArgumentException>(() => Expression.Block(typeof(string), expressions));
-            Assert.Throws<ArgumentException>(() => Expression.Block(typeof(string), expressions.ToArray()));
+            Assert.Throws<ArgumentException>(null, () => Expression.Block(typeof(string), expressions));
+            Assert.Throws<ArgumentException>(null, (() => Expression.Block(typeof(string), expressions.ToArray())));
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
-        [ActiveIssue(3881)]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void InvalidExpressionIndex(object value, int blockSize)
         {
             BlockExpression block = Expression.Block(PadBlock(blockSize - 1, Expression.Constant(value, value.GetType())));
-            Assert.Throws<ArgumentOutOfRangeException>(() => block.Expressions[-1]);
-            Assert.Throws<ArgumentOutOfRangeException>(() => block.Expressions[blockSize]);
+            Assert.Throws<ArgumentOutOfRangeException>("index", () => block.Expressions[-1]);
+            Assert.Throws<ArgumentOutOfRangeException>("index", () => block.Expressions[blockSize]);
         }
-
-        // Remove below if issue blocking above is fixed.
-        [Theory]
-        [MemberData("ConstantValuesAndSizes")]
-        public void InvalidExpressionIndexVaryingExceptin(object value, int blockSize)
-        {
-            BlockExpression block = Expression.Block(PadBlock(blockSize - 1, Expression.Constant(value, value.GetType())));
-            Assert.ThrowsAny<Exception>(() => block.Expressions[-1]);
-            Assert.ThrowsAny<Exception>(() => block.Expressions[blockSize]);
-        }
-
-        // See https://github.com/dotnet/corefx/issues/3043
-        [Fact]
-        public void EmptyBlockNotAllowed()
-        {
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block());
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(void)));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(Enumerable.Empty<Expression>()));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(void), Enumerable.Empty<Expression>()));
-        }
-
-        [Fact]
-        [ActiveIssue(3882)]
-        public void EmptyBlockWithParametersNotAllowed()
-        {
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1)));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1), Enumerable.Empty<Expression>()));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(void), Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1)));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(void), Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1), Enumerable.Empty<Expression>()));
-        }
-
-        // If https://github.com/dotnet/corefx/issues/3043 is ever actioned, this case would still be prohibited.
 
         [Fact]
         public void EmptyBlockWithNonVoidTypeNotAllowed()
         {
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(int)));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(int), Enumerable.Empty<Expression>()));
-        }
-
-        [Fact]
-        [ActiveIssue(3882)]
-        public void EmptyBlockWithParametersAndNonVoidTypeNotAllowed()
-        {
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(int), Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1)));
-            Assert.Throws<ArgumentException>("expressions", () => Expression.Block(typeof(int), Enumerable.Repeat<ParameterExpression>(Expression.Parameter(typeof(int)), 1), Enumerable.Empty<Expression>()));
+            Assert.Throws<ArgumentException>(null, () => Expression.Block(typeof(int)));
+            Assert.Throws<ArgumentException>(null, () => Expression.Block(typeof(int), Enumerable.Empty<Expression>()));
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void ResultPropertyFromParams(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -371,7 +292,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void ResultPropertyFromEnumerable(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -383,7 +304,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void VariableCountZeroOnNonVariableAcceptingForms(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -395,8 +316,8 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
-        [ActiveIssue(3883)]
+        [MemberData(nameof(ConstantValuesAndSizes))]
+        [ActiveIssue(3958)]
         public void RewriteToSameWithSameValues(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -408,7 +329,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void CanFindItems(object value, int blockSize)
         {
             ConstantExpression[] values = new ConstantExpression[blockSize];
@@ -424,7 +345,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void IdentifyNonAbsentItemAsAbsent(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -437,7 +358,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void ExpressionsEnumerable(object value, int blockSize)
         {
             ConstantExpression[] values = new ConstantExpression[blockSize];
@@ -453,7 +374,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void UpdateWithExpressionsReturnsSame(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -462,10 +383,11 @@ namespace System.Linq.Expressions.Test
             BlockExpression block = Expression.Block(expressions);
 
             Assert.Same(block, block.Update(block.Variables, block.Expressions));
+            Assert.Same(block, NoOpVisitor.Instance.Visit(block));
         }
 
         [Theory]
-        [MemberData("ConstantValuesAndSizes")]
+        [MemberData(nameof(ConstantValuesAndSizes))]
         public void Visit(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());
@@ -477,7 +399,7 @@ namespace System.Linq.Expressions.Test
         }
 
         [Theory]
-        [MemberData("ObjectAssignableConstantValuesAndSizes")]
+        [MemberData(nameof(ObjectAssignableConstantValuesAndSizes))]
         public void VisitTyped(object value, int blockSize)
         {
             ConstantExpression constant = Expression.Constant(value, value.GetType());

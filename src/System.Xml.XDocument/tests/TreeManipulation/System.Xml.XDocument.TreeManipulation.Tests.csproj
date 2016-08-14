@@ -8,6 +8,9 @@
     <OutputType>Library</OutputType>
     <AssemblyName>System.Xml.XDocument.TreeManipulation.Tests</AssemblyName>
     <RootNamespace>XLinqTests</RootNamespace>
+    <!-- Don't allow project reference to package dependency conversion -->
+    <KeepAllProjectReferences>true</KeepAllProjectReferences>
+    <NugetTargetMoniker>.NETStandard,Version=v1.3</NugetTargetMoniker>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

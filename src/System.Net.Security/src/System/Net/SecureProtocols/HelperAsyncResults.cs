@@ -1,6 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System.Diagnostics;
 using System.Threading;
 
 namespace System.Net
@@ -40,16 +42,23 @@ namespace System.Net
 
         public AsyncProtocolRequest(LazyAsyncResult userAsyncResult)
         {
-            if (GlobalLog.IsEnabled)
+            if (userAsyncResult == null)
             {
-                if (userAsyncResult == null)
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("AsyncProtocolRequest()|userAsyncResult == null");
                 }
-                if (userAsyncResult.InternalPeekCompleted)
+
+                Debug.Fail("AsyncProtocolRequest()|userAsyncResult == null");
+            }
+            if (userAsyncResult.InternalPeekCompleted)
+            {
+                if (GlobalLog.IsEnabled)
                 {
                     GlobalLog.Assert("AsyncProtocolRequest()|userAsyncResult is already completed.");
                 }
+
+                Debug.Fail("AsyncProtocolRequest()|userAsyncResult is already completed.");
             }
             UserAsyncResult = userAsyncResult;
         }

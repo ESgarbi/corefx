@@ -1,6 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
@@ -26,22 +28,10 @@ namespace System.Net.Security
 
         private FixedSizeReader _FrameReader;
 
-        // TODO (Issue #3114): Implement using TPL instead of APM.
-        private StreamAsyncHelper _innerStreamAPM;
-
-        internal StreamAsyncHelper InnerStreamAPM
-        {
-            get
-            {
-                return _innerStreamAPM;
-            }
-        }
-
         private void InitializeStreamPart()
         {
             _ReadHeader = new byte[4];
             _FrameReader = new FixedSizeReader(InnerStream);
-            _innerStreamAPM = new StreamAsyncHelper(InnerStream);
         }
 
         private byte[] InternalBuffer
@@ -97,22 +87,22 @@ namespace System.Net.Security
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
 
             if (offset < 0)
             {
-                throw new ArgumentOutOfRangeException("offset");
+                throw new ArgumentOutOfRangeException(nameof(offset));
             }
 
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             if (count > buffer.Length - offset)
             {
-                throw new ArgumentOutOfRangeException("count", SR.net_offset_plus_count);
+                throw new ArgumentOutOfRangeException(nameof(count), SR.net_offset_plus_count);
             }
         }
 
@@ -177,13 +167,13 @@ namespace System.Net.Security
                     {
                         // prepare for the next request
                         asyncRequest.SetNextRequest(buffer, offset + chunkBytes, count - chunkBytes, null);
-                        IAsyncResult ar = InnerStreamAPM.BeginWrite(outBuffer, 0, encryptedBytes, s_writeCallback, asyncRequest);
+                        IAsyncResult ar = InnerStream.BeginWrite(outBuffer, 0, encryptedBytes, s_writeCallback, asyncRequest);
                         if (!ar.CompletedSynchronously)
                         {
                             return;
                         }
 
-                        InnerStreamAPM.EndWrite(ar);
+                        InnerStream.EndWrite(ar);
                     }
                     else
                     {
@@ -300,9 +290,14 @@ namespace System.Net.Security
                 return 0;
             }
 
-            if ((readBytes == _ReadHeader.Length) && GlobalLog.IsEnabled)
+            if (!(readBytes == _ReadHeader.Length))
             {
-                GlobalLog.AssertFormat("NegoStream::ProcessHeader()|Frame size must be 4 but received {0} bytes.", readBytes);
+                if (GlobalLog.IsEnabled)
+                {
+                    GlobalLog.AssertFormat("NegoStream::ProcessHeader()|Frame size must be 4 but received {0} bytes.", readBytes);
+                }
+
+                Debug.Fail("NegoStream::ProcessHeader()|Frame size must be 4 but received " + readBytes + " bytes.");
             }
 
             // Replace readBytes with the body size recovered from the header content.
@@ -393,9 +388,14 @@ namespace System.Net.Security
                 return;
             }
 
-            if ((transportResult.AsyncState is AsyncProtocolRequest) && GlobalLog.IsEnabled)
+            if (!(transportResult.AsyncState is AsyncProtocolRequest))
             {
-                GlobalLog.Assert("NegotiateSteam::WriteCallback|State type is wrong, expected AsyncProtocolRequest.");
+                if (GlobalLog.IsEnabled)
+                {
+                    GlobalLog.Assert("NegotiateSteam::WriteCallback|State type is wrong, expected AsyncProtocolRequest.");
+                }
+
+                Debug.Fail("NegotiateSteam::WriteCallback|State type is wrong, expected AsyncProtocolRequest.");
             }
 
             AsyncProtocolRequest asyncRequest = (AsyncProtocolRequest)transportResult.AsyncState;
@@ -403,7 +403,7 @@ namespace System.Net.Security
             try
             {
                 NegotiateStream negoStream = (NegotiateStream)asyncRequest.AsyncObject;
-                negoStream.InnerStreamAPM.EndWrite(transportResult);
+                negoStream.InnerStream.EndWrite(transportResult);
                 if (asyncRequest.Count == 0)
                 {
                     // This was the last chunk.

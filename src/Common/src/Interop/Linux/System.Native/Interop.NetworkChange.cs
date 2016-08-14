@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Runtime.InteropServices;
 using System;
@@ -17,7 +18,7 @@ internal static partial class Interop
             LinkRemoved = 3
         }
 
-        public delegate void NetworkChangeEvent(NetworkChangeKind kind);
+        public delegate void NetworkChangeEvent(int socket, NetworkChangeKind kind);
 
         [DllImport(Libraries.SystemNative, EntryPoint = "SystemNative_CreateNetworkChangeListenerSocket")]
         public static extern Error CreateNetworkChangeListenerSocket(out int socket);
@@ -25,7 +26,7 @@ internal static partial class Interop
         [DllImport(Libraries.SystemNative, EntryPoint = "SystemNative_CloseNetworkChangeListenerSocket")]
         public static extern Error CloseNetworkChangeListenerSocket(int socket);
 
-        [DllImport(Libraries.SystemNative, EntryPoint = "SystemNative_ReadSingleEvent")]
-        public static extern NetworkChangeKind ReadSingleEvent(int socket);
+        [DllImport(Libraries.SystemNative, EntryPoint = "SystemNative_ReadEvents")]
+        public static extern void ReadEvents(int socket, NetworkChangeEvent onNetworkChange);
     }
 }

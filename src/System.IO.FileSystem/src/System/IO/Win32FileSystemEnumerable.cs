@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -99,11 +100,11 @@ namespace System.IO
         [SecurityCritical]
         private SafeFindHandle _hnd = null;
 
-        // empty means we know in advance that we won’t find any search results, which can happen if:
-        // 1. we don’t have a search pattern
-        // 2. we’re enumerating only the top directory and found no matches during the first call
-        // This flag allows us to return early for these cases. We can’t know this in advance for
-        // SearchOption.AllDirectories because we do a “*” search for subdirs and then use the
+        // empty means we know in advance that we won?t find any search results, which can happen if:
+        // 1. we don?t have a search pattern
+        // 2. we?re enumerating only the top directory and found no matches during the first call
+        // This flag allows us to return early for these cases. We can?t know this in advance for
+        // SearchOption.AllDirectories because we do a ?*? search for subdirs and then use the
         // searchPattern at each directory level.
         private bool _empty;
 
@@ -124,7 +125,7 @@ namespace System.IO
 
             _oldMode = Interop.mincore.SetErrorMode(Interop.mincore.SEM_FAILCRITICALERRORS);
 
-            string normalizedSearchPattern = NormalizeSearchPattern(searchPattern);
+            string normalizedSearchPattern = PathHelpers.NormalizeSearchPattern(searchPattern);
 
             if (normalizedSearchPattern.Length == 0)
             {
@@ -136,7 +137,7 @@ namespace System.IO
                 _searchOption = searchOption;
 
                 _fullPath = Path.GetFullPath(path);
-                string fullSearchString = GetFullSearchString(_fullPath, normalizedSearchPattern);
+                string fullSearchString = PathHelpers.GetFullSearchString(_fullPath, normalizedSearchPattern);
                 _normalizedSearchPath = Path.GetDirectoryName(fullSearchString);
 
                 // normalize search criteria
@@ -223,7 +224,7 @@ namespace System.IO
             {
                 PathInternal.CheckInvalidPathChars(fullPath);
                 if (PathInternal.HasWildCardCharacters(fullPath))
-                    throw new ArgumentException(SR.Argument_InvalidPathChars, "fullPath");
+                    throw new ArgumentException(SR.Argument_InvalidPathChars, nameof(fullPath));
 
                 _searchData = new PathPair(userPath, normalizedSearchPath);
                 CommonInit();
@@ -458,23 +459,6 @@ namespace System.IO
             }
         }
 
-        private static string NormalizeSearchPattern(string searchPattern)
-        {
-            Contract.Requires(searchPattern != null);
-
-            // Win32 normalization trims only U+0020.
-            string tempSearchPattern = searchPattern.TrimEnd(PathHelpers.TrimEndChars);
-
-            // Make this corner case more useful, like dir
-            if (tempSearchPattern.Equals("."))
-            {
-                tempSearchPattern = "*";
-            }
-
-            PathHelpers.CheckSearchPattern(tempSearchPattern);
-            return tempSearchPattern;
-        }
-
         private static string GetNormalizedSearchCriteria(string fullSearchString, string fullPathMod)
         {
             Contract.Requires(fullSearchString != null);
@@ -494,24 +478,6 @@ namespace System.IO
                 searchCriteria = fullSearchString.Substring(fullPathMod.Length + 1);
             }
             return searchCriteria;
-        }
-
-        private static string GetFullSearchString(string fullPath, string searchPattern)
-        {
-            Contract.Requires(fullPath != null);
-            Contract.Requires(searchPattern != null);
-
-            PathHelpers.ThrowIfEmptyOrRootedPath(searchPattern);
-            string tempStr = Path.Combine(fullPath, searchPattern);
-
-            // If path ends in a trailing slash (\), append a * or we'll get a "Cannot find the file specified" exception
-            char lastChar = tempStr[tempStr.Length - 1];
-            if (PathInternal.IsDirectorySeparator(lastChar) || lastChar == Path.VolumeSeparatorChar)
-            {
-                tempStr = tempStr + "*";
-            }
-
-            return tempStr;
         }
     }
 

@@ -1,8 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xml.Serialization
 {
@@ -12,8 +10,7 @@ namespace System.Xml.Serialization
     using System.Xml.Schema;
     using System;
     using System.ComponentModel;
-    // this[key] api throws KeyNotFoundException
-    using Hashtable = System.Collections.InternalHashtable;
+    using System.Collections.Generic;
 
     /// <include file='doc\XmlAttributeOverrides.uex' path='docs/doc[@for="XmlAttributeOverrides"]/*' />
     /// <devdoc>
@@ -21,7 +18,7 @@ namespace System.Xml.Serialization
     /// </devdoc>
     public class XmlAttributeOverrides
     {
-        private Hashtable _types = new Hashtable();
+        private readonly Dictionary<Type, Dictionary<string, XmlAttributes>> _types = new Dictionary<Type, Dictionary<string, XmlAttributes>>();
 
         /// <include file='doc\XmlAttributeOverrides.uex' path='docs/doc[@for="XmlAttributeOverrides.Add"]/*' />
         /// <devdoc>
@@ -38,13 +35,13 @@ namespace System.Xml.Serialization
         /// </devdoc>
         public void Add(Type type, string member, XmlAttributes attributes)
         {
-            Hashtable members = (Hashtable)_types[type];
-            if (members == null)
+            Dictionary<string, XmlAttributes> members;
+            if (!_types.TryGetValue(type, out members))
             {
-                members = new Hashtable();
+                members = new Dictionary<string, XmlAttributes>();
                 _types.Add(type, members);
             }
-            else if (members[member] != null)
+            else if (members.ContainsKey(member))
             {
                 throw new InvalidOperationException(SR.Format(SR.XmlAttributeSetAgain, type.FullName, member));
             }
@@ -71,9 +68,11 @@ namespace System.Xml.Serialization
         {
             get
             {
-                Hashtable members = (Hashtable)_types[type];
-                if (members == null) return null;
-                return (XmlAttributes)members[member];
+                Dictionary<string, XmlAttributes> members;
+                XmlAttributes attributes;
+                return _types.TryGetValue(type, out members) && members.TryGetValue(member, out attributes)
+                    ? attributes
+                    : null;
             }
         }
     }

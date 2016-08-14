@@ -8,6 +8,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>System.Xml.RW.WrappedReader.Tests</AssemblyName>
     <RootNamespace>XmlReaderTest</RootNamespace>
+    <NugetTargetMoniker>.NETStandard,Version=v1.3</NugetTargetMoniker>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -30,13 +31,14 @@
       <Project>{89701565-f68b-46d9-bd78-95b0f052c50b}</Project>
       <Name>XmlCoreTest</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\src\System.Xml.ReaderWriter.csproj">
+    <ProjectReference Include="..\..\..\pkg\System.Xml.ReaderWriter.pkgproj">
       <Project>{c559743a-762e-4d9d-b986-e77bdb97652e}</Project>
       <Name>System.Xml.ReaderWriter</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\XmlReaderLib\System.Xml.RW.XmlReaderLib.csproj">
       <Project>{6d9b0285-5e8a-4c20-9c53-9e2084ef64c4}</Project>
       <Name>System.Xml.RW.XmlReaderLib</Name>
+      <KeepProjectReference>true</KeepProjectReference>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Dynamic.Utils;
 
@@ -238,7 +239,14 @@ namespace System.Linq.Expressions.Compiler
                     return new Result(RewriteAction.None, node);
 
                 default:
-                    throw ContractUtils.Unreachable;
+                    result = RewriteExpression(node.ReduceAndCheck(), stack);
+                    if (result.Action == RewriteAction.None)
+                    {
+                        // it's at least Copy because we reduced the node
+                        result = new Result(result.Action | RewriteAction.Copy, result.Node);
+                    }
+
+                    break;
             }
 
             VerifyRewrite(result, node);

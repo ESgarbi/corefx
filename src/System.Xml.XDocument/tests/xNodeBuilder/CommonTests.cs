@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Xml.Linq;
 using System.Xml.XmlDiff;
 using Microsoft.Test.ModuleCore;
 using XmlCoreTest.Common;
+using Xunit;
 
 namespace CoreXml.Test.XLinq
 {
@@ -3400,22 +3402,24 @@ namespace CoreXml.Test.XLinq
                 }
 
                 //[Variation(Id = 5, Desc = "WriteCData with ]]>", Priority = 1)]
-                public void CData_5()
+                [Fact]
+                //[ActiveIssue(4054)]
+                public void WriteCDataWithTwoClosingBrackets_5()
                 {
                     XDocument doc = new XDocument();
-                    XmlWriter w = doc.CreateWriter();
-                    w.WriteStartElement("Root");
-                    w.WriteCData("test ]]> test");
-                    w.WriteEndElement();
-                    w.Dispose();
-                    try
+                    using (XmlWriter w = doc.CreateWriter())
                     {
-                        if (CompareReader(doc, "<Root><![CDATA[test ]]]]><![CDATA[> test]]></Root>"))
-                        {
-                            throw new TestException(TestResult.Failed, "");
-                        }
+                        w.WriteStartElement("Root");
+                        w.WriteCData("test ]]> test");
+                        w.WriteEndElement();
                     }
-                    catch (ArgumentException) { return; }
+
+                    string expectedXml = "<Root><![CDATA[test ]]]]><![CDATA[> test]]></Root>";
+
+                    using (XmlReader reader = doc.CreateReader())
+                    {
+                        Assert.Equal(expectedXml, MoveToFirstElement(reader).ReadOuterXml());
+                    }
                 }
 
                 //[Variation(Id = 6, Desc = "WriteCData with & < > chars, they should not be escaped", Priority = 2)]
@@ -3590,22 +3594,24 @@ namespace CoreXml.Test.XLinq
                 }
 
                 //[Variation(Id = 6, Desc = "WriteComment with -- in value", Priority = 1)]
-                public void comment_6()
+                [Fact]
+                //[ActiveIssue(4057)]
+                public void WriteCommentWithDoubleHyphensInValue()
                 {
                     XDocument doc = new XDocument();
-                    XmlWriter w = doc.CreateWriter();
-                    w.WriteStartElement("Root");
-                    w.WriteComment("test --");
-                    w.WriteEndElement();
-                    w.Dispose();
-                    try
+                    using (XmlWriter w = doc.CreateWriter())
                     {
-                        if (CompareReader(doc, "<Root><!--test - - --></Root>"))
-                        {
-                            throw new TestException(TestResult.Failed, "");
-                        }; //by design 329815
+                        w.WriteStartElement("Root");
+                        w.WriteComment("test --");
+                        w.WriteEndElement();
                     }
-                    catch (ArgumentException) { return; }
+
+                    string expectedXml = "<Root><!--test - - --></Root>";
+
+                    using (XmlReader reader = doc.CreateReader())
+                    {
+                        Assert.Equal(expectedXml, MoveToFirstElement(reader).ReadOuterXml());
+                    }
                 }
             }
 
@@ -4189,22 +4195,24 @@ namespace CoreXml.Test.XLinq
                 }
 
                 //[Variation(Id = 11, Desc = "Include PI end tag ?> as part of the text value", Priority = 1)]
-                public void pi_11()
+                [Fact]
+                //[ActiveIssue(4063)]
+                public void IncludePIEndTagAsPartOfTextValue()
                 {
                     XDocument doc = new XDocument();
-                    XmlWriter w = CreateWriter(doc);
-                    w.WriteStartElement("Root");
-                    w.WriteProcessingInstruction("badpi", "text ?>");
-                    w.WriteEndElement();
-                    w.Dispose();
-                    try
+                    using (XmlWriter w = CreateWriter(doc))
                     {
-                        if (CompareReader(doc, "<Root><?badpi text ? >?></Root>"))
-                        {
-                            throw new TestException(TestResult.Failed, "");
-                        }
+                        w.WriteStartElement("Root");
+                        w.WriteProcessingInstruction("badpi", "text ?>");
+                        w.WriteEndElement();
                     }
-                    catch (ArgumentException) { return; }
+
+                    string expectedXml = "<Root><?badpi text ? >?></Root>";
+
+                    using (XmlReader reader = doc.CreateReader())
+                    {
+                        Assert.Equal(expectedXml, MoveToFirstElement(reader).ReadOuterXml());
+                    }
                 }
 
                 //[Variation(Id = 12, Desc = "WriteProcessingInstruction with valid surrogate pair", Priority = 1)]
@@ -4957,7 +4965,7 @@ namespace CoreXml.Test.XLinq
                 public void writeValue_2()
                 {
                     Calendar myCal = CultureInfo.InvariantCulture.Calendar;
-                    DateTime myDT = new DateTime(2002, 4, 3);
+                    DateTime myDT = new DateTime(2002, 4, 3, 0, 0, 0, DateTimeKind.Utc);
                     XDocument doc = new XDocument();
                     XmlWriter w = CreateWriter(doc);
                     w.WriteStartElement("Root");
@@ -4965,7 +4973,7 @@ namespace CoreXml.Test.XLinq
                     w.WriteEndElement();
                     w.Dispose();
 
-                    if (!CompareReader(doc, "<Root>2002-04-03T00:00:00-08:00</Root>")) throw new TestException(TestResult.Failed, "");
+                    if (!CompareReader(doc, "<Root>2002-04-03T00:00:00Z</Root>")) throw new TestException(TestResult.Failed, "");
                 }
 
                 //[Variation(Id = 3, Desc = "WriteValue(decimal)", Priority = 1)]
@@ -6540,6 +6548,17 @@ namespace CoreXml.Test.XLinq
                         }
                     }
                 }
+            }
+
+            // Helper method
+            protected static XmlReader MoveToFirstElement(XmlReader reader)
+            {
+                while (reader.Read() && reader.NodeType != XmlNodeType.Element)
+                {
+                    // nop
+                }
+
+                return reader;
             }
         }
     }

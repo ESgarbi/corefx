@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -82,7 +83,7 @@ namespace System.Net.NetworkInformation
         {
             get
             {
-                // TODO: This is a crude approximation, but does allow us to determine
+                // This is a crude approximation, but does allow us to determine
                 // whether an interface is operational or not. The OS exposes more information
                 // (see ifconfig and the "Status" label), but it's unclear how closely
                 // that information maps to the OperationalStatus enum we expose here.
@@ -91,8 +92,6 @@ namespace System.Net.NetworkInformation
         }
 
         public override long Speed { get { return _speed; } }
-
-        public override string Description { get { throw new PlatformNotSupportedException(SR.net_InformationUnavailableOnPlatform); } }
 
         public override bool SupportsMulticast { get { return _ipProperties.MulticastAddresses.Count > 0; } }
 

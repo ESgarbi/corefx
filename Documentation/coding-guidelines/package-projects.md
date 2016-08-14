@@ -20,7 +20,7 @@ Sample `System.Text.Encodings.Web.pkgproj`
 
   <ItemGroup>
     <ProjectReference Include="..\src\System.Text.Encodings.Web.csproj">
-      <SupportedFramework>net45;netcore45;wp8;wpa81;dnxcore50</SupportedFramework>
+      <SupportedFramework>net45;netcore45;wp8;wpa81;netcoreapp1.0</SupportedFramework>
     </ProjectReference>
   </ItemGroup>
 
@@ -41,7 +41,7 @@ Sample `System.Collections.Concurrent.pkgproj`
       <SupportedFramework>net45;netcore45;wpa81</SupportedFramework>
     </ProjectReference>
     <ProjectReference Include="..\ref\System.Collections.Concurrent.csproj">
-      <SupportedFramework>net46;netcore50;dnxcore50</SupportedFramework>
+      <SupportedFramework>net46;netcore50;netcoreapp1.0</SupportedFramework>
     </ProjectReference>
     <ProjectReference Include="..\src\System.Collections.Concurrent.csproj"/>
 
@@ -70,7 +70,7 @@ Sample `System.IO.FileSystem.pkgproj`
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <ItemGroup>
     <ProjectReference Include="..\ref\System.IO.FileSystem.csproj">
-      <SupportedFramework>net46;netcore50;dnxcore50</SupportedFramework>
+      <SupportedFramework>net46;netcore50;netcoreapp1.0</SupportedFramework>
     </ProjectReference>
     <ProjectReference Include="..\src\Facade\System.IO.FileSystem.csproj" />
     <ProjectReference Include="win\System.IO.FileSystem.pkgproj" />
@@ -151,7 +151,7 @@ The primary thing that the library author needs to do in order to ensure the cor
 ### Which version of dotnet/netstandard should I select?
 TL;DR - choose the lowest version that doesn't result in build errors for both the library projects and package project.
 
-NETStandard/DotNet are *open* ended portable identifiers.  They allow a package to place an asset in a folder and that asset can be reused on any framework that supports that version of NETStandard/DotNet.  This is in contrast to the previous *closed* set portable-a+b+c identifiers which only applied to the frameworks listed in the set.  For more information see [.NET Platform Standard](https://github.com/dotnet/corefx/blob/master/Documentation/project-docs/standard-platform.md).
+NETStandard/DotNet are *open* ended portable identifiers.  They allow a package to place an asset in a folder and that asset can be reused on any framework that supports that version of NETStandard/DotNet.  This is in contrast to the previous *closed* set portable-a+b+c identifiers which only applied to the frameworks listed in the set.  For more information see [.NET Platform Standard](https://github.com/dotnet/corefx/blob/master/Documentation/architecture/net-platform-standard.md).
 
 Libraries should select a version of DotNet/NETStandard that supports the most frameworks.  This means the library should choose the lowest version that provides all the API needed to implement their functionality.  Eventually this will be the same moniker used for package resolution in the library project, AKA in `frameworks` section for the libraries project.json.
 
@@ -171,14 +171,14 @@ Part of package build is to ensure that a package is applicable on all platforms
         <SupportedFramework>net45;netcore45;wpa81</SupportedFramework>
     </ProjectReference>
     <ProjectReference Include="..\ref\System.Collections.Concurrent.csproj">
-        <SupportedFramework>net46;netcore50;dnxcore50</SupportedFramework>
+        <SupportedFramework>net46;netcore50;netcoreapp1.0</SupportedFramework>
     </ProjectReference>
     ```
 
 2. Through SupportedFramework items with Version metdata.
     ```
     <!-- no version indicates latest is supported -->
-    <SupportedFramework Include="net46;netcore50;dnxcore50" />
+    <SupportedFramework Include="net46;netcore50;netcoreapp1.0" />
     <!-- specific version indicates that version is supported -->
     <SupportedFramework Include="net45;netcore45;wpa81">
         <Version>4.0.0.0</Version>

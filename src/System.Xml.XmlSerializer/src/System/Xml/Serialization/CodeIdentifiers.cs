@@ -1,8 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xml.Serialization
 {
@@ -11,8 +9,8 @@ namespace System.Xml.Serialization
     using System.IO;
     using System.Globalization;
     using System.Xml.Extensions;
-    // this[key] api throws KeyNotFoundException
-    using Hashtable = System.Collections.InternalHashtable;
+    using System.Collections.Generic;
+
 
 
     /// <include file='doc\CodeIdentifiers.uex' path='docs/doc[@for="CodeIdentifiers"]/*' />
@@ -22,19 +20,7 @@ namespace System.Xml.Serialization
     /// </devdoc>
     internal class CodeIdentifiers
     {
-        private Hashtable _identifiers;
-        private Hashtable _reservedIdentifiers;
-        private ArrayList _list;
-
-        public CodeIdentifiers()
-        {
-            _identifiers = new Hashtable();
-            _reservedIdentifiers = new Hashtable();
-            _list = new ArrayList();
-        }
-
-
-
+        private readonly HashSet<string> _identifiers = new HashSet<string>();
 
         /// <include file='doc\CodeIdentifiers.uex' path='docs/doc[@for="CodeIdentifiers.MakeUnique"]/*' />
         /// <devdoc>
@@ -81,7 +67,7 @@ namespace System.Xml.Serialization
         /// </devdoc>
         public bool IsInUse(string identifier)
         {
-            return _identifiers.Contains(identifier) || _reservedIdentifiers.Contains(identifier);
+            return _identifiers.Contains(identifier);
         }
 
         /// <include file='doc\CodeIdentifiers.uex' path='docs/doc[@for="CodeIdentifiers.Add"]/*' />
@@ -90,8 +76,7 @@ namespace System.Xml.Serialization
         /// </devdoc>
         public void Add(string identifier, object value)
         {
-            _identifiers.Add(identifier, value);
-            _list.Add(value);
+            _identifiers.Add(identifier);
         }
     }
 }

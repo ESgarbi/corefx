@@ -2,17 +2,18 @@
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <ItemGroup>
-    <Project Include="System.Net.NameResolution.csproj">
-      <OSGroup>Linux</OSGroup>
+    <Project Include="System.Net.NameResolution.csproj" >
+      <OSGroup>Windows_NT</OSGroup>
+    </Project>
+    <Project Include="System.Net.NameResolution.csproj" >
+      <OSGroup>Unix</OSGroup>
     </Project>
     <Project Include="System.Net.NameResolution.csproj">
-      <OSGroup>OSX</OSGroup>
+      <TargetGroup>net46</TargetGroup>
     </Project>
     <Project Include="System.Net.NameResolution.csproj">
       <OSGroup>Windows_NT</OSGroup>
-    </Project>
-    <Project Include="facade\System.Net.NameResolution.csproj">
-      <TargetGroup>net46</TargetGroup>
+      <TargetGroup>netcore50</TargetGroup>
     </Project>
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.traversal.targets))\dir.traversal.targets" />

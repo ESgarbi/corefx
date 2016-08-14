@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -256,7 +257,6 @@ namespace System.Numerics.Tests
 
         // Various rotation decompose test.
         [Fact]
-        [ActiveIssue(4833, PlatformID.OSX)]
         public void Matrix4x4DecomposeTest01()
         {
             DecomposeTest(10.0f, 20.0f, 30.0f, new Vector3(10, 20, 30), new Vector3(2, 3, 4));

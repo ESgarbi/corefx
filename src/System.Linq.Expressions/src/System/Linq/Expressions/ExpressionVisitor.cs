@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.ObjectModel;
@@ -50,6 +51,7 @@ namespace System.Linq.Expressions
         /// otherwise, returns the original expression list.</returns>
         public ReadOnlyCollection<Expression> Visit(ReadOnlyCollection<Expression> nodes)
         {
+            ContractUtils.RequiresNotNull(nodes, nameof(nodes));
             Expression[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++)
             {
@@ -92,6 +94,8 @@ namespace System.Linq.Expressions
         /// otherwise, returns the original node list.</returns>
         public static ReadOnlyCollection<T> Visit<T>(ReadOnlyCollection<T> nodes, Func<T, T> elementVisitor)
         {
+            ContractUtils.RequiresNotNull(nodes, nameof(nodes));
+            ContractUtils.RequiresNotNull(elementVisitor, nameof(elementVisitor));
             T[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++)
             {
@@ -151,6 +155,7 @@ namespace System.Linq.Expressions
         /// <exception cref="InvalidOperationException">The visit method for this node returned a different type.</exception>
         public ReadOnlyCollection<T> VisitAndConvert<T>(ReadOnlyCollection<T> nodes, string callerName) where T : Expression
         {
+            ContractUtils.RequiresNotNull(nodes, nameof(nodes));
             T[] newNodes = null;
             for (int i = 0, n = nodes.Count; i < n; i++)
             {

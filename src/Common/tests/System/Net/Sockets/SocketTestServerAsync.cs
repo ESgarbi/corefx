@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Net.Test.Common;
@@ -138,7 +139,7 @@ namespace System.Net.Sockets.Tests
             }
 
             _log.WriteLine(this.GetHashCode() + " StartAccept(_numConnectedSockets={0})", _numConnectedSockets);
-            Assert.True(_maxNumberAcceptedClientsSemaphore.WaitOne(Configuration.PassingTestTimeout), "Timeout waiting for client connection.");
+            Assert.True(_maxNumberAcceptedClientsSemaphore.WaitOne(TestSettings.PassingTestTimeout), "Timeout waiting for client connection.");
 
             if (_listenSocket == null)
             {
@@ -387,7 +388,7 @@ namespace System.Net.Sockets.Tests
     // and assigned to SocketAsyncEventArgs objects for use with each  
     // socket I/O operation.   
     //
-    // This enables bufffers to be easily reused and guards against  
+    // This enables buffers to be easily reused and guards against  
     // fragmenting heap memory. 
     //  
     // The operations exposed on the BufferManager class are not thread safe. 

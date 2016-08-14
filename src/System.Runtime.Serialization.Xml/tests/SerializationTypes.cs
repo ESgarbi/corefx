@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -1284,6 +1285,18 @@ namespace SerializationTypes
         }
     }
 
+    public class TypeWithDateTimePropertyAsXmlTime
+    {
+        DateTime _value;
+
+        [XmlText(DataType = "time")]
+        public DateTime Value
+        {
+            get { return _value; }
+            set { _value = value; }
+        }
+    }
+
     [DataContract(IsReference = false)]
     public class SimpleDC
     {
@@ -2368,6 +2381,27 @@ namespace SerializationTypes
     {
         public string Name { get; set; }
     }
+
+    public class SimpleTypeWihtMoreProperties
+    {
+        public string StringProperty { get; set; }
+        public int IntProperty { get; set; }
+        public MyEnum EnumProperty { get; set; }
+        public List<string> CollectionProperty { get; set; }
+        public List<SimpleTypeWihtMoreProperties> SimpleTypeList { get; set; }
+    }
+
+    public class TypeWith2DArrayProperty1
+    {
+        [System.Xml.Serialization.XmlArrayItemAttribute("SimpleType", typeof(SimpleType), NestingLevel = 1, IsNullable = false)]
+        public SimpleType[][] TwoDArrayOfSimpleType;
+    }
+
+    public class TypeWith2DArrayProperty2
+    {
+        [System.Xml.Serialization.XmlArrayItemAttribute("SimpleType", typeof(SimpleType[]), IsNullable = false)]
+        public SimpleType[][] TwoDArrayOfSimpleType;
+    }
 }
 
 namespace DuplicateTypeNamesTest.ns1
@@ -2501,9 +2535,43 @@ public class NonSerializablePerson
     }
 }
 
+public class NonSerializablePersonForStress
+{
+    public string Name { get; private set; }
+    public int Age { get; private set; }
+
+    public NonSerializablePersonForStress(string name, int age)
+    {
+        this.Name = name;
+        this.Age = age;
+    }
+
+    public override string ToString()
+    {
+        return string.Format("Person[Name={0},Age={1}]", this.Name, this.Age);
+    }
+}
+
 public class Family
 {
     public NonSerializablePerson[] Members;
+
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("Family members:");
+        foreach (var member in this.Members)
+        {
+            sb.AppendLine("  " + member);
+        }
+
+        return sb.ToString();
+    }
+}
+
+public class FamilyForStress
+{
+    public NonSerializablePersonForStress[] Members;
 
     public override string ToString()
     {
@@ -2527,6 +2595,16 @@ public class NonSerializablePersonSurrogate
     public int Age { get; set; }
 }
 
+// Note that DataContractAttribute.IsReference is set to true.
+[DataContract(IsReference = true)]
+public class NonSerializablePersonForStressSurrogate
+{
+    [DataMember(Name = "PersonName")]
+    public string Name { get; set; }
+    [DataMember(Name = "PersonAge")]
+    public int Age { get; set; }
+}
+
 public class MyPersonSurrogateProvider : ISerializationSurrogateProvider
 {
     public Type GetSurrogateType(Type type)
@@ -2534,6 +2612,10 @@ public class MyPersonSurrogateProvider : ISerializationSurrogateProvider
         if (type == typeof(NonSerializablePerson))
         {
             return typeof(NonSerializablePersonSurrogate);
+        }
+        else if (type == typeof(NonSerializablePersonForStress))
+        {
+            return typeof(NonSerializablePersonForStressSurrogate);
         }
         else
         {
@@ -2548,6 +2630,11 @@ public class MyPersonSurrogateProvider : ISerializationSurrogateProvider
             NonSerializablePersonSurrogate person = (NonSerializablePersonSurrogate)obj;
             return new NonSerializablePerson(person.Name, person.Age);
         }
+        else if (obj is NonSerializablePersonForStressSurrogate)
+        {
+            NonSerializablePersonForStressSurrogate person = (NonSerializablePersonForStressSurrogate)obj;
+            return new NonSerializablePersonForStress(person.Name, person.Age);
+        }
 
         return obj;
     }
@@ -2558,6 +2645,17 @@ public class MyPersonSurrogateProvider : ISerializationSurrogateProvider
         {
             NonSerializablePerson nsp = (NonSerializablePerson)obj;
             NonSerializablePersonSurrogate serializablePerson = new NonSerializablePersonSurrogate
+            {
+                Name = nsp.Name,
+                Age = nsp.Age,
+            };
+
+            return serializablePerson;
+        }
+        else if (obj is NonSerializablePersonForStress)
+        {
+            NonSerializablePersonForStress nsp = (NonSerializablePersonForStress)obj;
+            NonSerializablePersonForStressSurrogate serializablePerson = new NonSerializablePersonForStressSurrogate
             {
                 Name = nsp.Name,
                 Age = nsp.Age,
@@ -2711,4 +2809,145 @@ public class TypeWithTimeSpanProperty
 public class TypeWithByteProperty
 {
     public byte ByteProperty;
+}
+
+[DataContract(Name = "TypeWithIntAndStringProperty", Namespace = "")]
+public class TypeWithIntAndStringProperty
+{
+    [DataMember]
+    public int SampleInt { get; set; }
+
+    [DataMember]
+    public string SampleString { get; set; }
+}
+
+[DataContract(Name = "TypeWithTypeWithIntAndStringPropertyProperty", Namespace = "")]
+public class TypeWithTypeWithIntAndStringPropertyProperty
+{
+    [DataMember]
+    public TypeWithIntAndStringProperty ObjectProperty { get; set; }
+}
+
+[DataContract]
+public class TypeWithCollectionInterfaceGetOnlyCollection
+{
+    List<string> items;
+
+    [DataMember]
+    public ICollection<string> Items
+    {
+        get
+        {
+            if (items == null)
+            {
+                items = new List<string>();
+            }
+            return this.items;
+        }
+    }
+
+    public TypeWithCollectionInterfaceGetOnlyCollection() { }
+
+    public TypeWithCollectionInterfaceGetOnlyCollection(List<string> items)
+    {
+        this.items = items;
+    }
+}
+
+[DataContract]
+public class TypeWithEnumerableInterfaceGetOnlyCollection
+{
+    List<string> items;
+
+    [DataMember]
+    public IEnumerable<string> Items
+    {
+        get
+        {
+            if (items == null)
+            {
+                items = new List<string>();
+            }
+            return this.items;
+        }
+    }
+
+    public TypeWithEnumerableInterfaceGetOnlyCollection() { }
+
+    public TypeWithEnumerableInterfaceGetOnlyCollection(List<string> items)
+    {
+        this.items = items;
+    }
+}
+
+[CollectionDataContract]
+public class RecursiveCollection : List<RecursiveCollection2>
+{
+
+}
+
+[CollectionDataContract]
+public class RecursiveCollection2 : List<RecursiveCollection3>
+{
+
+}
+
+[CollectionDataContract]
+public class RecursiveCollection3 : List<RecursiveCollection>
+{
+
+}
+
+[XmlRoot()]
+public class TypeWithXmlNodeArrayProperty
+{
+    [XmlText]
+    public XmlNode[] CDATA { get; set; }
+}
+
+[DataContract]
+public class TypeWithListOfReferenceChildren
+{
+    [DataMember]
+    public List<TypeOfReferenceChild> Children { get; set; }
+}
+
+[DataContract(IsReference = true)]
+public class TypeOfReferenceChild
+{
+    [DataMember]
+    public TypeWithListOfReferenceChildren Root { get; set; }
+    [DataMember]
+    public string Name { get; set; }
+}
+
+[DataContract]
+public sealed class TypeWithInternalDefaultConstructor
+{
+    internal TypeWithInternalDefaultConstructor()
+    {
+    }
+
+    internal static TypeWithInternalDefaultConstructor CreateInstance()
+    {
+        return new TypeWithInternalDefaultConstructor();
+    }
+
+    [DataMember]
+    public string Name { get; set; }
+}
+
+public sealed class TypeWithInternalDefaultConstructorWithoutDataContractAttribute
+{
+    internal TypeWithInternalDefaultConstructorWithoutDataContractAttribute()
+    {
+    }
+
+    internal static TypeWithInternalDefaultConstructorWithoutDataContractAttribute CreateInstance()
+    {
+        return new TypeWithInternalDefaultConstructorWithoutDataContractAttribute();
+    }
+
+    [DataMember]
+    public string Name { get; set; }
 }

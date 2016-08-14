@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -60,16 +61,22 @@ namespace System.Reflection.Metadata
         /// Use <see cref="PEReaderExtensions.GetMetadataReader(PortableExecutable.PEReader, MetadataReaderOptions, MetadataStringDecoder)"/> to obtain 
         /// metadata from a PE image.
         /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is not positive.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="metadata"/> is null.</exception>
+        /// <exception cref="ArgumentException">The encoding of <paramref name="utf8Decoder"/> is not <see cref="UTF8Encoding"/>.</exception>
+        /// <exception cref="PlatformNotSupportedException">The current platform is big-endian.</exception>
         public unsafe MetadataReader(byte* metadata, int length, MetadataReaderOptions options, MetadataStringDecoder utf8Decoder)
         {
-            if (length <= 0)
+            // Do not throw here when length is 0. We'll throw BadImageFormatException later on, so that the caller doesn't need to 
+            // worry about the image (stream) being empty and can handle all image errors by catching BadImageFormatException.
+            if (length < 0)
             {
-                throw new ArgumentOutOfRangeException("length");
+                throw new ArgumentOutOfRangeException(nameof(length));
             }
 
             if (metadata == null)
             {
-                throw new ArgumentNullException("metadata");
+                throw new ArgumentNullException(nameof(metadata));
             }
 
             if (utf8Decoder == null)
@@ -79,12 +86,12 @@ namespace System.Reflection.Metadata
 
             if (!(utf8Decoder.Encoding is UTF8Encoding))
             {
-                throw new ArgumentException(SR.MetadataStringDecoderEncodingMustBeUtf8, "utf8Decoder");
+                throw new ArgumentException(SR.MetadataStringDecoderEncodingMustBeUtf8, nameof(utf8Decoder));
             }
 
             if (!BitConverter.IsLittleEndian)
             {
-                throw new PlatformNotSupportedException(SR.LitteEndianArchitectureRequired);
+                Throw.LitteEndianArchitectureRequired();
             }
 
             this.Block = new MemoryBlock(metadata, length);
@@ -169,7 +176,7 @@ namespace System.Reflection.Metadata
 
         /// <summary>
         /// Looks like this function reads beginning of the header described in
-        /// Ecma-335 24.2.1 Metadata root
+        /// ECMA-335 24.2.1 Metadata root
         /// </summary>
         private void ReadMetadataHeader(ref BlobReader memReader, out string versionString)
         {
@@ -227,7 +234,7 @@ namespace System.Reflection.Metadata
         }
 
         /// <summary>
-        /// Reads stream headers described in Ecma-335 24.2.2 Stream header
+        /// Reads stream headers described in ECMA-335 24.2.2 Stream header
         /// </summary>
         private StreamHeader[] ReadStreamHeaders(ref BlobReader memReader)
         {
@@ -457,7 +464,7 @@ namespace System.Reflection.Metadata
             // We will not be checking version values. We will continue checking that the set of 
             // present tables is within the set we understand.
 
-            ulong validTables = (ulong)TableMask.V3_0_TablesMask;
+            ulong validTables = (ulong)(TableMask.TypeSystemTables | TableMask.DebugTables);
 
             if ((presentTables & ~validTables) != 0)
             {
@@ -486,11 +493,11 @@ namespace System.Reflection.Metadata
             }
         }
 
-        private int[] ReadMetadataTableRowCounts(ref BlobReader memReader, ulong presentTableMask)
+        private static int[] ReadMetadataTableRowCounts(ref BlobReader memReader, ulong presentTableMask)
         {
             ulong currentTableBit = 1;
 
-            var rowCounts = new int[TableIndexExtensions.Count];
+            var rowCounts = new int[MetadataTokens.TableCount];
             for (int i = 0; i < rowCounts.Length; i++)
             {
                 if ((presentTableMask & currentTableBit) != 0)
@@ -515,7 +522,8 @@ namespace System.Reflection.Metadata
             return rowCounts;
         }
 
-        private void ReadStandalonePortablePdbStream(MemoryBlock block, out DebugMetadataHeader debugMetadataHeader, out int[] externalTableRowCounts)
+        // internal for testing
+        internal static void ReadStandalonePortablePdbStream(MemoryBlock block, out DebugMetadataHeader debugMetadataHeader, out int[] externalTableRowCounts)
         {
             var reader = new BlobReader(block);
 
@@ -529,7 +537,8 @@ namespace System.Reflection.Metadata
             // The return type of the entry point method shall be void, int32, or unsigned int32. 
             // The entry point method cannot be defined in a generic class.
             uint entryPointToken = reader.ReadUInt32();
-            if (entryPointToken != 0 && (entryPointToken & TokenTypeIds.TypeMask) != TokenTypeIds.MethodDef)
+            int entryPointRowId = (int)(entryPointToken & TokenTypeIds.RIDMask);
+            if (entryPointToken != 0 && ((entryPointToken & TokenTypeIds.TypeMask) != TokenTypeIds.MethodDef || entryPointRowId == 0))
             {
                 throw new BadImageFormatException(string.Format(SR.InvalidEntryPointToken, entryPointToken));
             }
@@ -537,7 +546,7 @@ namespace System.Reflection.Metadata
             ulong externalTableMask = reader.ReadUInt64();
 
             // EnC & Ptr tables can't be referenced from standalone PDB metadata:
-            const ulong validTables = (ulong)(TableMask.V2_0_TablesMask & ~TableMask.PtrTables & ~TableMask.EnCLog & ~TableMask.EnCMap);
+            const ulong validTables = (ulong)TableMask.ValidPortablePdbExternalTables;
 
             if ((externalTableMask & ~validTables) != 0)
             {
@@ -548,7 +557,7 @@ namespace System.Reflection.Metadata
 
             debugMetadataHeader = new DebugMetadataHeader(
                 ImmutableByteArrayInterop.DangerousCreateFromUnderlyingArray(ref pdbId),
-                MethodDefinitionHandle.FromRowId((int)(entryPointToken & TokenTypeIds.RIDMask)));
+                MethodDefinitionHandle.FromRowId(entryPointRowId));
         }
 
         private const int SmallIndexSize = 2;
@@ -740,7 +749,8 @@ namespace System.Reflection.Metadata
             // debug tables:
             // Type-system metadata tables may be stored in a separate (external) metadata file.
             // We need to use the row counts of the external tables when referencing them.
-            var combinedRowCounts = (externalRowCountsOpt != null) ? CombineRowCounts(rowCounts, externalRowCountsOpt, TableIndex.Document) : rowCounts;
+            // Debug tables are local to the current metadata image and type system metadata tables are external and precede all debug tables.
+            var combinedRowCounts = (externalRowCountsOpt != null) ? CombineRowCounts(rowCounts, externalRowCountsOpt, firstLocalTableIndex: TableIndex.Document) : rowCounts;
 
             int methodRefSizeCombined = GetReferenceSize(combinedRowCounts, TableIndex.MethodDef);
             int hasCustomDebugInformationRefSizeCombined = ComputeCodedTokenSize(HasCustomDebugInformationTag.LargeRowSize, combinedRowCounts, HasCustomDebugInformationTag.TablesReferenced);
@@ -775,19 +785,19 @@ namespace System.Reflection.Metadata
             }
         }
 
-        private static int[] CombineRowCounts(int[] local, int[] external, TableIndex firstExternalTableIndex)
+        private static int[] CombineRowCounts(int[] local, int[] external, TableIndex firstLocalTableIndex)
         {
             Debug.Assert(local.Length == external.Length);
 
             var rowCounts = new int[local.Length];
-            for (int i = 0; i < (int)firstExternalTableIndex; i++)
-            {
-                rowCounts[i] = local[i];
-            }
-
-            for (int i = (int)firstExternalTableIndex; i < rowCounts.Length; i++)
+            for (int i = 0; i < (int)firstLocalTableIndex; i++)
             {
                 rowCounts[i] = external[i];
+            }
+
+            for (int i = (int)firstLocalTableIndex; i < rowCounts.Length; i++)
+            {
+                rowCounts[i] = local[i];
             }
 
             return rowCounts;
@@ -802,7 +812,7 @@ namespace System.Reflection.Metadata
 
             bool isAllReferencedTablesSmall = true;
             ulong tablesReferencedMask = (ulong)tablesReferenced;
-            for (int tableIndex = 0; tableIndex < TableIndexExtensions.Count; tableIndex++)
+            for (int tableIndex = 0; tableIndex < MetadataTokens.TableCount; tableIndex++)
             {
                 if ((tablesReferencedMask & 1) != 0)
                 {
@@ -1000,138 +1010,66 @@ namespace System.Reflection.Metadata
 
         #region Public APIs
 
-        public MetadataReaderOptions Options
-        {
-            get { return _options; }
-        }
+        /// <summary>
+        /// Pointer to the underlying data.
+        /// </summary>
+        public unsafe byte* MetadataPointer => Block.Pointer;
 
-        public string MetadataVersion
-        {
-            get { return _versionString; }
-        }
+        /// <summary>
+        /// Length of the underlying data.
+        /// </summary>
+        public int MetadataLength => Block.Length;
+
+        /// <summary>
+        /// Options passed to the constructor.
+        /// </summary>
+        public MetadataReaderOptions Options => _options;
+
+        /// <summary>
+        /// Version string read from metadata header.
+        /// </summary>
+        public string MetadataVersion => _versionString;
 
         /// <summary>
         /// Information decoded from #Pdb stream, or null if the stream is not present.
         /// </summary>
-        public DebugMetadataHeader DebugMetadataHeader
-        {
-            get { return _debugMetadataHeader; }
-        }
+        public DebugMetadataHeader DebugMetadataHeader => _debugMetadataHeader;
 
-        public MetadataKind MetadataKind
-        {
-            get { return _metadataKind; }
-        }
+        /// <summary>
+        /// The kind of the metadata (plain ECMA335, WinMD, etc.).
+        /// </summary>
+        public MetadataKind MetadataKind => _metadataKind;
 
-        public MetadataStringComparer StringComparer
-        {
-            get { return new MetadataStringComparer(this); }
-        }
+        /// <summary>
+        /// Comparer used to compare strings stored in metadata.
+        /// </summary>
+        public MetadataStringComparer StringComparer => new MetadataStringComparer(this);
 
-        public bool IsAssembly
-        {
-            get { return this.AssemblyTable.NumberOfRows == 1; }
-        }
+        /// <summary>
+        /// Returns true if the metadata represent an assembly.
+        /// </summary>
+        public bool IsAssembly => AssemblyTable.NumberOfRows == 1;
 
-        public AssemblyReferenceHandleCollection AssemblyReferences
-        {
-            get { return new AssemblyReferenceHandleCollection(this); }
-        }
-
-        public TypeDefinitionHandleCollection TypeDefinitions
-        {
-            get { return new TypeDefinitionHandleCollection(TypeDefTable.NumberOfRows); }
-        }
-
-        public TypeReferenceHandleCollection TypeReferences
-        {
-            get { return new TypeReferenceHandleCollection(TypeRefTable.NumberOfRows); }
-        }
-
-        public CustomAttributeHandleCollection CustomAttributes
-        {
-            get { return new CustomAttributeHandleCollection(this); }
-        }
-
-        public DeclarativeSecurityAttributeHandleCollection DeclarativeSecurityAttributes
-        {
-            get { return new DeclarativeSecurityAttributeHandleCollection(this); }
-        }
-
-        public MemberReferenceHandleCollection MemberReferences
-        {
-            get { return new MemberReferenceHandleCollection(MemberRefTable.NumberOfRows); }
-        }
-
-        public ManifestResourceHandleCollection ManifestResources
-        {
-            get { return new ManifestResourceHandleCollection(ManifestResourceTable.NumberOfRows); }
-        }
-
-        public AssemblyFileHandleCollection AssemblyFiles
-        {
-            get { return new AssemblyFileHandleCollection(FileTable.NumberOfRows); }
-        }
-
-        public ExportedTypeHandleCollection ExportedTypes
-        {
-            get { return new ExportedTypeHandleCollection(ExportedTypeTable.NumberOfRows); }
-        }
-
-        public MethodDefinitionHandleCollection MethodDefinitions
-        {
-            get { return new MethodDefinitionHandleCollection(this); }
-        }
-
-        public FieldDefinitionHandleCollection FieldDefinitions
-        {
-            get { return new FieldDefinitionHandleCollection(this); }
-        }
-
-        public EventDefinitionHandleCollection EventDefinitions
-        {
-            get { return new EventDefinitionHandleCollection(this); }
-        }
-
-        public PropertyDefinitionHandleCollection PropertyDefinitions
-        {
-            get { return new PropertyDefinitionHandleCollection(this); }
-        }
-
-        public DocumentHandleCollection Documents
-        {
-            get { return new DocumentHandleCollection(this); }
-        }
-
-        public MethodDebugInformationHandleCollection MethodDebugInformation
-        {
-            get { return new MethodDebugInformationHandleCollection(this); }
-        }
-
-        public LocalScopeHandleCollection LocalScopes
-        {
-            get { return new LocalScopeHandleCollection(this, 0); }
-        }
-
-        public LocalVariableHandleCollection LocalVariables
-        {
-            get { return new LocalVariableHandleCollection(this, default(LocalScopeHandle)); }
-        }
-
-        public LocalConstantHandleCollection LocalConstants
-        {
-            get { return new LocalConstantHandleCollection(this, default(LocalScopeHandle)); }
-        }
-
-        public ImportScopeCollection ImportScopes
-        {
-            get { return new ImportScopeCollection(this); }
-        }
-
-        public CustomDebugInformationHandleCollection CustomDebugInformation
-        {
-            get { return new CustomDebugInformationHandleCollection(this); }
-        }
+        public AssemblyReferenceHandleCollection AssemblyReferences => new AssemblyReferenceHandleCollection(this);
+        public TypeDefinitionHandleCollection TypeDefinitions => new TypeDefinitionHandleCollection(TypeDefTable.NumberOfRows);
+        public TypeReferenceHandleCollection TypeReferences => new TypeReferenceHandleCollection(TypeRefTable.NumberOfRows);
+        public CustomAttributeHandleCollection CustomAttributes => new CustomAttributeHandleCollection(this);
+        public DeclarativeSecurityAttributeHandleCollection DeclarativeSecurityAttributes => new DeclarativeSecurityAttributeHandleCollection(this);
+        public MemberReferenceHandleCollection MemberReferences => new MemberReferenceHandleCollection(MemberRefTable.NumberOfRows);
+        public ManifestResourceHandleCollection ManifestResources => new ManifestResourceHandleCollection(ManifestResourceTable.NumberOfRows);
+        public AssemblyFileHandleCollection AssemblyFiles => new AssemblyFileHandleCollection(FileTable.NumberOfRows);
+        public ExportedTypeHandleCollection ExportedTypes => new ExportedTypeHandleCollection(ExportedTypeTable.NumberOfRows);
+        public MethodDefinitionHandleCollection MethodDefinitions => new MethodDefinitionHandleCollection(this);
+        public FieldDefinitionHandleCollection FieldDefinitions => new FieldDefinitionHandleCollection(this);
+        public EventDefinitionHandleCollection EventDefinitions => new EventDefinitionHandleCollection(this);
+        public PropertyDefinitionHandleCollection PropertyDefinitions => new PropertyDefinitionHandleCollection(this);
+        public DocumentHandleCollection Documents => new DocumentHandleCollection(this);
+        public MethodDebugInformationHandleCollection MethodDebugInformation => new MethodDebugInformationHandleCollection(this);
+        public LocalScopeHandleCollection LocalScopes => new LocalScopeHandleCollection(this, 0);
+        public LocalVariableHandleCollection LocalVariables => new LocalVariableHandleCollection(this, default(LocalScopeHandle));
+        public LocalConstantHandleCollection LocalConstants => new LocalConstantHandleCollection(this, default(LocalScopeHandle));
+        public ImportScopeCollection ImportScopes => new ImportScopeCollection(this);
+        public CustomDebugInformationHandleCollection CustomDebugInformation => new CustomDebugInformationHandleCollection(this);
 
         public AssemblyDefinition GetAssemblyDefinition()
         {
@@ -1253,7 +1191,6 @@ namespace System.Reflection.Metadata
 
         public CustomAttributeHandleCollection GetCustomAttributes(EntityHandle handle)
         {
-            Debug.Assert(!handle.IsNil);
             return new CustomAttributeHandleCollection(this, handle);
         }
 
@@ -1480,7 +1417,6 @@ namespace System.Reflection.Metadata
 
         public CustomDebugInformationHandleCollection GetCustomDebugInformation(EntityHandle handle)
         {
-            Debug.Assert(!handle.IsNil);
             return new CustomDebugInformationHandleCollection(this, handle);
         }
 

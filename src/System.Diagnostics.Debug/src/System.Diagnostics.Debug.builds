@@ -3,20 +3,15 @@
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <ItemGroup>
     <Project Include="System.Diagnostics.Debug.csproj">
-      <OSGroup>FreeBSD</OSGroup>
-    </Project>
-    <Project Include="System.Diagnostics.Debug.csproj">
-      <OSGroup>Linux</OSGroup>
-    </Project>
-    <Project Include="System.Diagnostics.Debug.csproj">
-      <OSGroup>OSX</OSGroup>
+      <OSGroup>Unix</OSGroup>
     </Project>
     <Project Include="System.Diagnostics.Debug.csproj">
       <OSGroup>Windows_NT</OSGroup>
     </Project>
+    <!-- Net46 facade is currently inbox for 4.0 
     <Project Include="System.Diagnostics.Debug.csproj">
       <TargetGroup>net46</TargetGroup>
-    </Project>
+    </Project> -->
     <Project Include="System.Diagnostics.Debug.csproj">
       <OSGroup>Windows_NT</OSGroup>
       <TargetGroup>netcore50aot</TargetGroup>
